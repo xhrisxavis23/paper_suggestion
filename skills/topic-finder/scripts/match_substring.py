@@ -23,3 +23,25 @@ def match_substring(papers: Iterable[Paper], keywords: List[str]) -> List[Paper]
             seen.add(key)
             out.append(p)
     return out
+
+
+if __name__ == "__main__":
+    import argparse
+    import json
+    from pathlib import Path
+    from .load_metadb import load_rolling
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--rolling", required=True)
+    parser.add_argument("--keywords-file", required=True)
+    parser.add_argument("--out", required=True)
+    args = parser.parse_args()
+
+    keywords = json.loads(Path(args.keywords_file).read_text())
+    papers = load_rolling(Path(args.rolling))
+    matched = match_substring(papers, keywords)
+
+    with open(args.out, "w", encoding="utf-8") as f:
+        for p in matched:
+            f.write(json.dumps(p.to_jsonl_dict(), ensure_ascii=False) + "\n")
+    print(f"Matched {len(matched)} papers → {args.out}")

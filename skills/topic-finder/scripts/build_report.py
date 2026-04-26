@@ -120,3 +120,48 @@ def _authors(p: Paper) -> str:
     if len(p.authors) <= 3:
         return ", ".join(p.authors)
     return f"{', '.join(p.authors[:3])} et al."
+
+
+if __name__ == "__main__":
+    import argparse
+    import json
+    from pathlib import Path
+    from datetime import date, timedelta
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--topic", required=True)
+    parser.add_argument("--expanded-file", required=True)
+    parser.add_argument("--matched-file", required=True)
+    parser.add_argument("--clusters-file", required=True)
+    parser.add_argument("--gaps-validated-file", required=True)
+    parser.add_argument("--proposals-file", required=True)
+    parser.add_argument("--window-days", type=int, default=30)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--model", default="claude-sonnet-4-6")
+    args = parser.parse_args()
+
+    expanded = json.loads(Path(args.expanded_file).read_text())
+    matched = []
+    with open(args.matched_file, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line:
+                matched.append(Paper.from_jsonl_dict(json.loads(line)))
+    clusters = json.loads(Path(args.clusters_file).read_text())
+    gaps_validated = json.loads(Path(args.gaps_validated_file).read_text())
+    proposals = json.loads(Path(args.proposals_file).read_text())
+
+    today = date.today()
+    md = build_report(
+        topic=args.topic,
+        expanded=expanded,
+        matched=matched,
+        clusters=clusters,
+        gaps_validated=gaps_validated,
+        proposals=proposals,
+        run_meta={"model": args.model},
+        window=(today - timedelta(days=args.window_days), today),
+    )
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    Path(args.output).write_text(md, encoding="utf-8")
+    print(f"Report → {args.output}")
