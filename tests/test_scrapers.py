@@ -4,6 +4,7 @@ from datetime import date
 from collector.src.scrapers.arxiv import ArxivScraper
 from collector.src.scrapers.huggingface import HuggingFaceScraper
 from collector.src.scrapers.openreview import OpenReviewScraper
+from collector.src.scrapers.semantic_scholar import SemanticScholarScraper
 
 
 @pytest.mark.integration
@@ -30,5 +31,12 @@ def test_hf_scraper_returns_papers():
 @pytest.mark.integration
 def test_openreview_scraper_runs_without_error():
     s = OpenReviewScraper()
+    papers = s.fetch(date.today())
+    assert isinstance(papers, list)
+
+
+@pytest.mark.integration
+def test_s2_scraper_runs_without_error():
+    s = SemanticScholarScraper()
     papers = s.fetch(date.today())
     assert isinstance(papers, list)
