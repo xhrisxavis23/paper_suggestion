@@ -7,7 +7,6 @@ venv/
 # Generated data — do not commit
 metadb/
 reports/
-!reports/.gitkeep
 
 .DS_Store
 .idea/
