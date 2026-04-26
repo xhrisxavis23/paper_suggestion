@@ -35,7 +35,9 @@ jobs:
         run: |
           git config user.name "paper-suggestion-bot"
           git config user.email "noreply@github.com"
-          git add metadb/
+          # metadb/ is in .gitignore so devs do not commit local runs;
+          # CI force-adds to accumulate history on the remote.
+          git add -f metadb/
           if git diff --staged --quiet; then
             echo "No DB changes."
           else
