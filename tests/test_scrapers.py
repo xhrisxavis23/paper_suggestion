@@ -3,6 +3,7 @@ from datetime import date
 
 from collector.src.scrapers.arxiv import ArxivScraper
 from collector.src.scrapers.huggingface import HuggingFaceScraper
+from collector.src.scrapers.openreview import OpenReviewScraper
 
 
 @pytest.mark.integration
@@ -24,3 +25,10 @@ def test_hf_scraper_returns_papers():
     assert isinstance(papers, list)
     if papers:
         assert papers[0].source == "hf"
+
+
+@pytest.mark.integration
+def test_openreview_scraper_runs_without_error():
+    s = OpenReviewScraper()
+    papers = s.fetch(date.today())
+    assert isinstance(papers, list)
