@@ -38,12 +38,13 @@ if __name__ == "__main__":
     from datetime import date, timedelta
 
     from skills.topic_finder.scripts.load_metadb import (
-        DEFAULT_ROLLING_PATH,
+        DEFAULT_ROLLING_DIR,
         load_rolling,
     )
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--rolling", default=str(DEFAULT_ROLLING_PATH))
+    parser.add_argument("--rolling-dir", default=str(DEFAULT_ROLLING_DIR),
+                        help="Directory containing <YYMM>_rolling.jsonl files.")
     parser.add_argument("--keywords-file", required=True)
     parser.add_argument("--out", required=True)
     parser.add_argument("--window-days", type=int, default=None,
@@ -57,7 +58,7 @@ if __name__ == "__main__":
         if args.window_days is not None
         else None
     )
-    papers = load_rolling(Path(args.rolling), since=since)
+    papers = load_rolling(Path(args.rolling_dir), since=since)
     matched = match_substring(papers, keywords)
 
     out_path = Path(args.out)

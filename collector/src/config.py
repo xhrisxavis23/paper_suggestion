@@ -37,6 +37,8 @@ ROLLING_WINDOW_DAYS = 60
 
 # Default paths (relative to repo root)
 METADB_DIR = "metadb"
-ROLLING_JSONL = "metadb/rolling.jsonl"
+# Rolling DB is partitioned by month under ROLLING_DIR — files named
+# <YYMM>_rolling.jsonl (e.g. 2604_rolling.jsonl). See collector.src.db.RollingDB.
+ROLLING_DIR = "metadb"
 DAILY_DIR = "metadb/daily"
 STATS_JSON = "metadb/stats.json"

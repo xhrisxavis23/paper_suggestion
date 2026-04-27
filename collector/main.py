@@ -18,7 +18,7 @@ from typing import List
 from .src.config import (
     DAILY_DIR,
     METADB_DIR,
-    ROLLING_JSONL,
+    ROLLING_DIR,
     ROLLING_WINDOW_DAYS,
     STATS_JSON,
 )
@@ -72,7 +72,7 @@ def main() -> int:
         return 2
 
     root = Path(args.root)
-    rolling_path = root / ROLLING_JSONL
+    rolling_dir = root / ROLLING_DIR
     daily_dir = root / DAILY_DIR
     stats_path = root / STATS_JSON
     daily_dir.mkdir(parents=True, exist_ok=True)
@@ -90,7 +90,7 @@ def main() -> int:
     if not args.skip_s2:
         _run_source("s2", SemanticScholarScraper(), target_date, all_papers, counts, failures)
 
-    db = RollingDB(rolling_path)
+    db = RollingDB(rolling_dir)
     new_papers = db.append(all_papers)
     pruned = db.prune(today=target_date, window_days=ROLLING_WINDOW_DAYS)
 

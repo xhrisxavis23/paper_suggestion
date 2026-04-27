@@ -14,7 +14,7 @@ all citing only papers present in the DB (no hallucinated references).
 
 ## Prerequisites
 
-- `metadb/rolling.jsonl` exists and is non-empty (run `python -m collector.main` first if not).
+- `metadb/<YYMM>_rolling.jsonl` files exist (run `python -m collector.main` first if not).
 - Python 3.11+ on PATH.
 - Claude Sonnet 4.6 — this skill is intentionally Sonnet-tuned for cost.
 
@@ -44,7 +44,7 @@ Read `prompts/expand_keywords.md` and replace `{TOPIC}` with the user keyword. C
 Run:
 ```bash
 python -m skills.topic_finder.scripts.match_substring \
-    --rolling metadb/rolling.jsonl \
+    --rolling-dir metadb \
     --keywords-file reports/.cache/<run-id>/expanded_keywords.json \
     --out reports/.cache/<run-id>/matched.jsonl \
     --window-days <D>
