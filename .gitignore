@@ -4,10 +4,6 @@ __pycache__/
 .venv/
 venv/
 
-# Generated data — do not commit
-metadb/
-reports/
-
 .DS_Store
 .idea/
 .vscode/
