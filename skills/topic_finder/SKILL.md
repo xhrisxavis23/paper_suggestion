@@ -1,12 +1,12 @@
 ---
 name: topic-finder
-description: Analyze the rolling 30-day metadata DB for the user's keyword, then run a 4-bot pipeline (Trend-Analyzer → Gap-Hunter → Skeptic → Proposer) to produce a Markdown report containing trends, gaps, and concrete research proposals. Use when the user runs /find-topic or asks to find research gaps / proposals for a topic.
+description: Analyze the rolling metadata DB (default 60-day window) for the user's keyword, then run a 4-bot pipeline (Trend-Analyzer → Gap-Hunter → Skeptic → Proposer) to produce a Markdown report containing trends, gaps, and concrete research proposals. Use when the user runs /find-topic or asks to find research gaps / proposals for a topic.
 ---
 
 # topic-finder
 
 Given a research topic keyword from the user, build `reports/YYYY-MM-DD-<slug>.md` containing:
-1. trend clusters from the rolling 30-day metadata DB,
+1. trend clusters from the rolling metadata DB (default 60-day window),
 2. validated research gaps,
 3. concrete new research proposals,
 
@@ -28,7 +28,7 @@ Parsed from `/find-topic "<keyword>" [options...]`:
 | `--top N` | 10 | Representative papers per cluster |
 | `--clusters K` | 5 | Number of clusters Trend-Analyzer should output |
 | `--proposals P` | 5 | Number of proposals Proposer should output |
-| `--window D` | 30 | Rolling window days (must be ≤ DB window) |
+| `--window D` | 60 | Rolling window days (must be ≤ DB window). Mapped to `--window-days D` on the match script. |
 | `--expand-only` | off | Stop after keyword expansion + match (debug) |
 | `--dry-run` | off | Show match count + token estimate then stop |
 | `--output <path>` | `reports/YYYY-MM-DD-<slug>.md` | Output path |
@@ -46,10 +46,11 @@ Run:
 python -m skills.topic_finder.scripts.match_substring \
     --rolling metadb/rolling.jsonl \
     --keywords-file reports/.cache/<run-id>/expanded_keywords.json \
-    --out reports/.cache/<run-id>/matched.jsonl
+    --out reports/.cache/<run-id>/matched.jsonl \
+    --window-days <D>
 ```
 
-(Note: this CLI flag set is implemented in Task 13's script — add it now if missing.)
+`--window-days` filters the rolling DB to papers with `published_date` ≥ `today - D days` before substring matching. Defaults to no filter (uses the full DB).
 
 Read the match count.
 
@@ -60,7 +61,7 @@ Show the user:
 ```
 **Topic:** "<keyword>"
 **Expanded keywords:** [...]
-**매칭 논문:** <N>건 (rolling 30d)
+**매칭 논문:** <N>건 (rolling <D>d)
 **클러스터 K = <K>, 제안 P = <P>, Sonnet 4.6**
 **예상 토큰:** ~150K input, ~25K output
 **예상 비용:** ~600원
@@ -106,14 +107,18 @@ python -m skills.topic_finder.scripts.build_report \
     --output reports/<YYYY-MM-DD>-<slug>.md
 ```
 
-(Note: this CLI flag set is implemented in Task 14's script — add it now if missing.)
-
 ### §9. Final report to user
 
 Tell the user:
 - the absolute path to the generated report,
 - the cluster / gap / proposal counts,
 - total tokens used.
+
+## Display conventions
+
+- **Author truncation**: papers with ≤3 authors render every author by name; papers with 4+ render the first 3 followed by ` et al.`. So a paper with exactly 3 authors shows all three (no et al.).
+- **Reference IDs**: `P-<arxiv-id>` for arxiv papers (lossless); `P-<VENUE>-<6-hex>` for non-arxiv papers (collision-resistant short hash of the full paper id).
+- **DB window header**: `build_report` prints `(<N>d)` where N is computed from the actual `(start, end)` range, not a fixed string.
 
 ## Failure handling
 
@@ -122,8 +127,11 @@ Tell the user:
 - If a single bot returns malformed JSON: retry once with stricter "Return JSON only, no prose" preamble; if still malformed, save the raw output to the cache dir and fail with the path.
 - If any LLM call hits rate limit: wait 60s and retry once.
 
-## Out-of-scope (v0.1)
+## Out-of-scope (v0.2)
 
-- PDF body analysis (`--deep` integration with paper_search) — deferred to v0.2.
+- PDF body analysis (`--deep` integration with paper_search) — still deferred.
 - Embedding-based matching — substring only.
 - Personalization based on user's prior reads.
+- Slack/Discord webhook notifications.
+- Trend visualization (matplotlib SVG of cluster growth over time).
+- Multi-evaluator personas in Skeptic.

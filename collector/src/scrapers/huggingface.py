@@ -19,14 +19,18 @@ class HuggingFaceScraper:
     def __init__(self, session: requests.Session | None = None):
         self.session = session or requests.Session()
         self.session.headers.update({"User-Agent": USER_AGENT})
+        self.failures: List[str] = []
 
     def fetch(self, target_date: date) -> List[Paper]:
+        self.failures = []
         for offset in range(HF_FALLBACK_DAYS + 1):
             d = target_date - timedelta(days=offset)
             papers = self._fetch_one(d)
             if papers:
                 logger.info("HF daily %s: %d papers", d, len(papers))
                 return papers
+        # Exhausted all fallback dates with no papers — record only if HTTP errors
+        # occurred (a quiet empty list is normal for some weekend/holiday dates).
         return []
 
     def _fetch_one(self, d: date) -> List[Paper]:
@@ -40,6 +44,7 @@ class HuggingFaceScraper:
             data = r.json()
         except Exception as e:
             logger.warning("HF daily %s failed: %s", d, e)
+            self.failures.append(f"hf:{d.isoformat()}:{type(e).__name__}: {e}")
             return []
         return [self._parse(item, d) for item in data if "paper" in item]
 

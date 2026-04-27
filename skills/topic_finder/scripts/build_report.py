@@ -1,8 +1,17 @@
 """Assemble the final Markdown report from 4-bot JSON outputs."""
 from __future__ import annotations
 
+import hashlib
+import re
+import sys
 from datetime import date, datetime, timezone
+from pathlib import Path
 from typing import Dict, List, Tuple
+
+# Bootstrap so direct invocation (python scripts/build_report.py) also works.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from collector.src.models import Paper
 
@@ -23,7 +32,8 @@ def build_report(
     out.append(f'# Research Topic Suggestion — "{topic}"')
     out.append("")
     out.append(f"생성: {datetime.now(timezone.utc).isoformat()}")
-    out.append(f"DB 윈도우: {window[0].isoformat()} ~ {window[1].isoformat()} (30d)")
+    window_days = (window[1] - window[0]).days
+    out.append(f"DB 윈도우: {window[0].isoformat()} ~ {window[1].isoformat()} ({window_days}d)")
     out.append(f"모델: {run_meta.get('model', 'claude-sonnet-4-6')}")
     out.append(f"매칭 논문: {len(matched)}건")
     out.append(f"확장 키워드: {expanded}")
@@ -47,7 +57,7 @@ def build_report(
             for pid in top3:
                 p = by_id.get(pid)
                 if p:
-                    out.append(f"  - [{_short_id(pid)}] {p.title} — {_authors(p)}, {p.venue or '—'} {p.year or ''}")
+                    out.append(f"  - [{_short_id(pid, p.venue)}] {p.title} — {_authors(p)}, {p.venue or '—'} {p.year or ''}")
         out.append("")
 
     # Section 2 — Gaps
@@ -61,7 +71,7 @@ def build_report(
         out.append(f"- **설명**: {g.get('description', '')}")
         ev = g.get("evidence_papers", [])
         if ev:
-            out.append(f"- **근거 논문**: {', '.join(_short_id(x) for x in ev)}")
+            out.append(f"- **근거 논문**: {', '.join(_short_id(x, by_id[x].venue if x in by_id else None) for x in ev)}")
         out.append(f"- **Skeptic 검토**: ✓ 통과 — {g.get('skeptic_note', '')}")
         out.append("")
     if rejected:
@@ -86,14 +96,14 @@ def build_report(
         out.append(f"**예상 기여**: {prop.get('expected_contribution', '')}")
         refs = prop.get("references", [])
         if refs:
-            out.append(f"**참고**: {', '.join(_short_id(x) for x in refs)}")
+            out.append(f"**참고**: {', '.join(_short_id(x, by_id[x].venue if x in by_id else None) for x in refs)}")
         out.append("")
 
     # Section 4 — References
     out.append("## 4. 참고문헌 (메타DB 기반)")
     out.append("")
     for p in matched:
-        sid = _short_id(p.get_id())
+        sid = _short_id(p.get_id(), p.venue)
         out.append(f"[{sid}] {p.title}, {_authors(p)}, {p.venue or '—'} {p.year or ''} · {p.url}")
     out.append("")
 
@@ -107,14 +117,27 @@ def build_report(
     return "\n".join(out)
 
 
-def _short_id(pid: str) -> str:
-    """arxiv:2404.0001 → P-2404.0001 (just for display)."""
+_VENUE_SLUG_RE = re.compile(r"[^A-Za-z0-9]+")
+
+
+def _short_id(pid: str, venue: str | None = None) -> str:
+    """Display-friendly id.
+
+    arxiv:2404.0001 → P-2404.0001 (lossless)
+    title:foo bar baz... → P-<venue>-<6-hex of pid> (collision-resistant)
+    """
     if pid.startswith("arxiv:"):
         return f"P-{pid[6:]}"
-    return f"P-{pid[:20]}"
+    digest = hashlib.sha1(pid.encode("utf-8")).hexdigest()[:6]
+    if venue:
+        slug = _VENUE_SLUG_RE.sub("", venue).upper()[:8] or "X"
+        return f"P-{slug}-{digest}"
+    return f"P-X-{digest}"
 
 
 def _authors(p: Paper) -> str:
+    """First 3 authors verbatim; if more, append ' et al.' (so a paper with
+    exactly 3 authors shows all three; 4+ shows three + et al.)."""
     if not p.authors:
         return "—"
     if len(p.authors) <= 3:

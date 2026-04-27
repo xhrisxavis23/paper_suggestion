@@ -25,7 +25,8 @@ def test_paper_to_jsonl_dict_roundtrip():
         categories=["cs.LG", "cs.AI"],
     )
     d = p.to_jsonl_dict()
-    assert d["id"] == "arxiv:2404.0001"
+    # id is intentionally not persisted — readers compute it via get_id()
+    assert "id" not in d
     assert d["date"] == "2026-04-26"
     assert d["categories"] == ["cs.LG", "cs.AI"]
 

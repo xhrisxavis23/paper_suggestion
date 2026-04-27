@@ -18,6 +18,8 @@ class Paper:
     year: Optional[int] = None
     source: str = ""              # "arxiv" | "hf" | "openreview" | "s2"
     published_date: Optional[date] = None
+    # Currently arxiv-only — HF/OpenReview/S2 leave this []. A future
+    # category-based filter would silently exclude non-arxiv papers.
     categories: List[str] = field(default_factory=list)
 
     def get_id(self) -> str:
@@ -28,8 +30,9 @@ class Paper:
         return f"title:{normalized}"
 
     def to_jsonl_dict(self) -> dict:
+        # We don't emit `id` — readers compute it via get_id() at load time.
+        # Persisting it would let an id-formula change silently re-key old rows.
         d = asdict(self)
-        d["id"] = self.get_id()
         d["date"] = self.published_date.isoformat() if self.published_date else None
         d.pop("published_date")
         return d

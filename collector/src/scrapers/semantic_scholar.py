@@ -27,8 +27,13 @@ class SemanticScholarScraper:
         key = api_key or os.environ.get("SEMANTIC_SCHOLAR_API_KEY")
         if key:
             self.session.headers.update({"x-api-key": key})
+        # Without an API key, the public search-API rate-limits aggressively;
+        # most venues return 0. Set SEMANTIC_SCHOLAR_API_KEY to enable live
+        # venue verification (M-1).
+        self.failures: List[str] = []
 
     def fetch(self, target_date: date) -> List[Paper]:
+        self.failures = []
         out: List[Paper] = []
         cutoff = target_date - timedelta(days=ROLLING_WINDOW_DAYS)
         for venue in S2_VENUES:
@@ -36,6 +41,7 @@ class SemanticScholarScraper:
                 out.extend(self._fetch_venue(venue, cutoff, target_date))
             except Exception as e:
                 logger.warning("S2 venue %s failed: %s", venue, e)
+                self.failures.append(f"s2:{venue}:{type(e).__name__}: {e}")
             time.sleep(S2_DELAY)
         logger.info("S2: %d papers across %d venues", len(out), len(S2_VENUES))
         return out
@@ -51,6 +57,7 @@ class SemanticScholarScraper:
         r = self.session.get(S2_SEARCH, params=params, timeout=30)
         if r.status_code == 429:
             logger.warning("S2 rate-limited at venue %s — backing off", venue)
+            self.failures.append(f"s2:{venue}:rate-limited (429)")
             time.sleep(5)
             return []
         r.raise_for_status()

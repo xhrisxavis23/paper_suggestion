@@ -13,6 +13,7 @@ import logging
 import sys
 from datetime import date
 from pathlib import Path
+from typing import List
 
 from .src.config import (
     DAILY_DIR,
@@ -48,6 +49,20 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
+def _run_source(name: str, scraper, target_date: date,
+                all_papers: list, counts: dict, failures: List[str]) -> None:
+    try:
+        ps = scraper.fetch(target_date)
+        all_papers.extend(ps)
+        counts[name] = len(ps)
+    except Exception as e:
+        logger.error("%s failed: %s", name, e)
+        counts[name] = 0
+        failures.append(f"{name}:fatal:{type(e).__name__}: {e}")
+        return
+    failures.extend(getattr(scraper, "failures", []) or [])
+
+
 def main() -> int:
     args = parse_args()
     try:
@@ -62,50 +77,26 @@ def main() -> int:
     stats_path = root / STATS_JSON
     daily_dir.mkdir(parents=True, exist_ok=True)
 
-    all_papers = []
+    all_papers: list = []
     counts: dict[str, int] = {}
+    failures: List[str] = []
 
     if not args.skip_arxiv:
-        try:
-            ps = ArxivScraper().fetch(target_date)
-            all_papers.extend(ps)
-            counts["arxiv"] = len(ps)
-        except Exception as e:
-            logger.error("arXiv failed: %s", e)
-            counts["arxiv"] = 0
-
+        _run_source("arxiv", ArxivScraper(), target_date, all_papers, counts, failures)
     if not args.skip_hf:
-        try:
-            ps = HuggingFaceScraper().fetch(target_date)
-            all_papers.extend(ps)
-            counts["hf"] = len(ps)
-        except Exception as e:
-            logger.error("HF failed: %s", e)
-            counts["hf"] = 0
-
+        _run_source("hf", HuggingFaceScraper(), target_date, all_papers, counts, failures)
     if not args.skip_or:
-        try:
-            ps = OpenReviewScraper().fetch(target_date)
-            all_papers.extend(ps)
-            counts["openreview"] = len(ps)
-        except Exception as e:
-            logger.error("OpenReview failed: %s", e)
-            counts["openreview"] = 0
-
+        _run_source("openreview", OpenReviewScraper(), target_date, all_papers, counts, failures)
     if not args.skip_s2:
-        try:
-            ps = SemanticScholarScraper().fetch(target_date)
-            all_papers.extend(ps)
-            counts["s2"] = len(ps)
-        except Exception as e:
-            logger.error("S2 failed: %s", e)
-            counts["s2"] = 0
+        _run_source("s2", SemanticScholarScraper(), target_date, all_papers, counts, failures)
 
     db = RollingDB(rolling_path)
-    added = db.append(all_papers)
+    new_papers = db.append(all_papers)
     pruned = db.prune(today=target_date, window_days=ROLLING_WINDOW_DAYS)
 
-    digest_md = format_daily_digest(all_papers, target_date)
+    # Digest reflects newly-added papers only (not raw fetch list, which would
+    # re-list duplicates from prior days, especially via HF fallback).
+    digest_md = format_daily_digest(new_papers, target_date)
     daily_path = daily_dir / f"{target_date}.md"
     daily_path.write_text(digest_md, encoding="utf-8")
 
@@ -114,15 +105,16 @@ def main() -> int:
         "last_run": target_date.isoformat(),
         "fetched_per_source": counts,
         "total_fetched": len(all_papers),
-        "added_to_db": added,
+        "added_to_db": len(new_papers),
         "pruned": pruned,
         "total_in_rolling": total_in_db,
+        "failures": failures,
     }
     stats_path.parent.mkdir(parents=True, exist_ok=True)
     stats_path.write_text(json.dumps(stats, indent=2), encoding="utf-8")
 
-    logger.info("Daily collect done: fetched=%d, added=%d, pruned=%d, in_db=%d",
-                len(all_papers), added, pruned, total_in_db)
+    logger.info("Daily collect done: fetched=%d, added=%d, pruned=%d, in_db=%d, failures=%d",
+                len(all_papers), len(new_papers), pruned, total_in_db, len(failures))
     return 0
 
 

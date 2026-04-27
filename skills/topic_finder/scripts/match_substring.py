@@ -1,7 +1,14 @@
 """Substring matching of expanded keywords against paper title+abstract."""
 from __future__ import annotations
 
+import sys
+from pathlib import Path
 from typing import Iterable, List
+
+# Bootstrap so direct invocation (python scripts/match_substring.py) also works.
+_REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
 from collector.src.models import Paper
 
@@ -28,20 +35,34 @@ def match_substring(papers: Iterable[Paper], keywords: List[str]) -> List[Paper]
 if __name__ == "__main__":
     import argparse
     import json
-    from pathlib import Path
-    from .load_metadb import load_rolling
+    from datetime import date, timedelta
+
+    from skills.topic_finder.scripts.load_metadb import (
+        DEFAULT_ROLLING_PATH,
+        load_rolling,
+    )
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--rolling", required=True)
+    parser.add_argument("--rolling", default=str(DEFAULT_ROLLING_PATH))
     parser.add_argument("--keywords-file", required=True)
     parser.add_argument("--out", required=True)
+    parser.add_argument("--window-days", type=int, default=None,
+                        help="Filter to papers with published_date within "
+                             "the last N days (relative to today UTC).")
     args = parser.parse_args()
 
     keywords = json.loads(Path(args.keywords_file).read_text())
-    papers = load_rolling(Path(args.rolling))
+    since = (
+        date.today() - timedelta(days=args.window_days)
+        if args.window_days is not None
+        else None
+    )
+    papers = load_rolling(Path(args.rolling), since=since)
     matched = match_substring(papers, keywords)
 
-    with open(args.out, "w", encoding="utf-8") as f:
+    out_path = Path(args.out)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8") as f:
         for p in matched:
             f.write(json.dumps(p.to_jsonl_dict(), ensure_ascii=False) + "\n")
-    print(f"Matched {len(matched)} papers → {args.out}")
+    print(f"Matched {len(matched)} papers (window={args.window_days}d) → {args.out}")

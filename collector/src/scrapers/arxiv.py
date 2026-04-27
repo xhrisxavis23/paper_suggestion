@@ -92,8 +92,10 @@ class ArxivScraper:
     def __init__(self, session: requests.Session | None = None):
         self.session = session or requests.Session()
         self.session.headers.update({"User-Agent": USER_AGENT})
+        self.failures: List[str] = []
 
     def fetch(self, target_date: date) -> List[Paper]:
+        self.failures = []
         start, end = _date_window(target_date, ARXIV_LOOKBACK_DAYS)
         out: List[Paper] = []
         for cat in ARXIV_CATEGORIES:
@@ -101,6 +103,7 @@ class ArxivScraper:
                 out.extend(self._fetch_category(cat, start, end))
             except Exception as e:
                 logger.warning("arXiv category %s failed: %s", cat, e)
+                self.failures.append(f"arxiv:{cat}:{type(e).__name__}: {e}")
             time.sleep(ARXIV_DELAY)
         logger.info("arXiv: %d papers across %d categories",
                     len(out), len(ARXIV_CATEGORIES))

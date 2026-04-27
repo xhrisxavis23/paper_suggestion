@@ -19,14 +19,17 @@ class OpenReviewScraper:
     def __init__(self, session: requests.Session | None = None):
         self.session = session or requests.Session()
         self.session.headers.update({"User-Agent": USER_AGENT})
+        self.failures: List[str] = []
 
     def fetch(self, target_date: date) -> List[Paper]:
+        self.failures = []
         out: List[Paper] = []
         for venue_id in OPENREVIEW_VENUE_IDS:
             try:
                 out.extend(self._fetch_venue(venue_id))
             except Exception as e:
                 logger.warning("OpenReview %s failed: %s", venue_id, e)
+                self.failures.append(f"openreview:{venue_id}:{type(e).__name__}: {e}")
         logger.info("OpenReview: %d papers across %d venues",
                     len(out), len(OPENREVIEW_VENUE_IDS))
         return out

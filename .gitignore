@@ -7,3 +7,10 @@ venv/
 .DS_Store
 .idea/
 .vscode/
+
+# v0.2 verification drivers (kept locally, not part of release)
+_run_pipeline.py
+_backfill.sh
+
+# Per-run pipeline cache (regenerated on each run)
+reports/.cache/

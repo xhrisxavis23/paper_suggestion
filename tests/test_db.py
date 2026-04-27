@@ -24,7 +24,7 @@ def test_append_then_load(tmp_path: Path):
     p2 = make_paper("2404.0002", date(2026, 4, 25))
 
     added = db.append([p1, p2])
-    assert added == 2
+    assert len(added) == 2
 
     loaded = db.load_all()
     ids = {p.get_id() for p in loaded}
@@ -35,11 +35,22 @@ def test_append_dedupes_by_id(tmp_path: Path):
     db = RollingDB(tmp_path / "rolling.jsonl")
     p = make_paper("2404.0001", date(2026, 4, 26))
 
-    assert db.append([p]) == 1
-    assert db.append([p]) == 0  # second time: no new entries
+    assert len(db.append([p])) == 1
+    assert db.append([p]) == []  # second time: no new entries
 
     loaded = db.load_all()
     assert len(loaded) == 1
+
+
+def test_append_dedupes_in_batch_and_preserves_order(tmp_path: Path):
+    db = RollingDB(tmp_path / "rolling.jsonl")
+    p1 = make_paper("2404.0001", date(2026, 4, 26))
+    p2 = make_paper("2404.0002", date(2026, 4, 25))
+    p1_dup = make_paper("2404.0001", date(2026, 4, 26))
+
+    added = db.append([p1, p2, p1_dup, p2])
+    assert [p.arxiv_id for p in added] == ["2404.0001", "2404.0002"]
+    assert len(db.load_all()) == 2
 
 
 def test_prune_drops_old_entries(tmp_path: Path):

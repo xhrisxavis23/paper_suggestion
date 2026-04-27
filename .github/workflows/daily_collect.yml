@@ -31,6 +31,10 @@ jobs:
         run: |
           python -m collector.main
 
+      - name: Sweep daily digests older than 60 days
+        run: |
+          find metadb/daily -type f -name "*.md" -mtime +60 -print -delete || true
+
       - name: Commit DB changes
         run: |
           git config user.name "paper-suggestion-bot"

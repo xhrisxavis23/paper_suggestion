@@ -33,7 +33,7 @@ HF_FALLBACK_DAYS = 3
 USER_AGENT = "paper-suggestion-bot/0.1"
 
 # Rolling window in days
-ROLLING_WINDOW_DAYS = 30
+ROLLING_WINDOW_DAYS = 60
 
 # Default paths (relative to repo root)
 METADB_DIR = "metadb"
