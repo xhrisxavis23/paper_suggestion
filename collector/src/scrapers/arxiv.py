@@ -55,9 +55,8 @@ def _result_to_paper(entry: ET.Element, category: str) -> Paper:
     try:
         pub_dt = datetime.fromisoformat(published.replace("Z", "+00:00"))
         pub_date = pub_dt.astimezone(timezone.utc).date()
-        year = pub_dt.year
     except Exception:
-        pub_date, year = None, None
+        pub_date = None
 
     pdf_url = ""
     for link in entry.findall("atom:link", NS):
@@ -81,7 +80,6 @@ def _result_to_paper(entry: ET.Element, category: str) -> Paper:
         pdf_url=pdf_url,
         arxiv_id=arxiv_id,
         venue="arXiv",
-        year=year,
         source="arxiv",
         published_date=pub_date,
         categories=cats,

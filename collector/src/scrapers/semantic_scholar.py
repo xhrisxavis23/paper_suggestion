@@ -70,7 +70,6 @@ class SemanticScholarScraper:
                 continue
             abstract = (item.get("abstract") or "").strip()
             authors = [a.get("name", "") for a in item.get("authors", []) if a.get("name")]
-            year = item.get("year")
             pub_str = item.get("publicationDate")
             try:
                 pub_date = date.fromisoformat(pub_str) if pub_str else None
@@ -87,7 +86,6 @@ class SemanticScholarScraper:
                 pdf_url=f"https://arxiv.org/pdf/{arxiv_id}.pdf" if arxiv_id else "",
                 arxiv_id=arxiv_id,
                 venue=venue,
-                year=year,
                 source="s2",
                 published_date=pub_date,
                 categories=[],

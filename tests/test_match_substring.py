@@ -38,3 +38,37 @@ def test_match_substring_dedupes_papers():
 def test_match_substring_returns_empty_when_no_match():
     papers = [make("Foo", arxiv_id="1")]
     assert match_substring(papers, ["bar"]) == []
+
+
+# I-1: max_papers ranking + cap
+def test_match_substring_max_papers_caps_by_date_then_venue():
+    from datetime import date as _d
+    from collector.src.models import Paper
+
+    fresh_arxiv = Paper(title="A latest", arxiv_id="1",
+                        published_date=_d(2026, 4, 20), source="arxiv", venue="arXiv")
+    older_neurips = Paper(title="A older nips", arxiv_id="2",
+                          published_date=_d(2026, 4, 15), source="arxiv", venue="NeurIPS")
+    older_arxiv = Paper(title="A older arxiv", arxiv_id="3",
+                        published_date=_d(2026, 4, 15), source="arxiv", venue="arXiv")
+    oldest = Paper(title="A oldest", arxiv_id="4",
+                   published_date=_d(2026, 3, 1), source="arxiv", venue="arXiv")
+
+    out = match_substring([fresh_arxiv, older_neurips, older_arxiv, oldest],
+                          ["a"], max_papers=3)
+    # date DESC: fresh_arxiv first; then between the two 04-15 papers,
+    # NeurIPS (weight 5) outranks arXiv (weight 0); oldest (03-01) drops off.
+    assert [p.arxiv_id for p in out] == ["1", "2", "3"]
+
+
+def test_match_substring_no_max_papers_preserves_input_order():
+    from datetime import date as _d
+    from collector.src.models import Paper
+
+    a = Paper(title="A first input", arxiv_id="1",
+              published_date=_d(2026, 1, 1), source="arxiv")
+    b = Paper(title="A second input", arxiv_id="2",
+              published_date=_d(2026, 4, 1), source="arxiv")  # newer but listed second
+    out = match_substring([a, b], ["a"])
+    # No cap → input order preserved (no sorting)
+    assert [p.arxiv_id for p in out] == ["1", "2"]

@@ -15,12 +15,19 @@ class Paper:
     pdf_url: str = ""
     arxiv_id: Optional[str] = None
     venue: Optional[str] = None  # "arXiv", "NeurIPS", "ICLR", ...
-    year: Optional[int] = None
-    source: str = ""              # "arxiv" | "hf" | "openreview" | "s2"
+    source: str = ""              # primary source: "arxiv" | "hf" | "openreview" | "s2"
     published_date: Optional[date] = None
     # Currently arxiv-only — HF/OpenReview/S2 leave this []. A future
     # category-based filter would silently exclude non-arxiv papers.
     categories: List[str] = field(default_factory=list)
+    # Other sources where this paper also appeared (e.g., ["hf"] when an
+    # arxiv paper was also on HuggingFace daily). Populated by RollingDB.append
+    # on id collision so we don't lose the second-source curation signal.
+    also_in: List[str] = field(default_factory=list)
+
+    @property
+    def year(self) -> Optional[int]:
+        return self.published_date.year if self.published_date else None
 
     def get_id(self) -> str:
         if self.arxiv_id:
@@ -49,8 +56,8 @@ class Paper:
             pdf_url=d.get("pdf_url", ""),
             arxiv_id=d.get("arxiv_id"),
             venue=d.get("venue"),
-            year=d.get("year"),
             source=d.get("source", ""),
             published_date=published,
             categories=list(d.get("categories", [])),
+            also_in=list(d.get("also_in", [])),
         )

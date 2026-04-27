@@ -23,17 +23,47 @@ jobs:
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r collector/requirements.txt
+          pip install -r collector/requirements.txt pytest
+
+      - name: Run pytest (fail-fast — don't push broken DB)
+        run: |
+          pytest -q
 
       - name: Run collector
         env:
           SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
         run: |
-          python -m collector.main
+          python -m collector.main --with-s2
 
       - name: Sweep daily digests older than 60 days
         run: |
           find metadb/daily -type f -name "*.md" -mtime +60 -print -delete || true
+
+      - name: Sweep stats history older than 90 days
+        run: |
+          python - <<'PY'
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+          import json
+          src = Path("metadb/stats_history.jsonl")
+          if not src.exists():
+              raise SystemExit(0)
+          cutoff = datetime.now(timezone.utc) - timedelta(days=90)
+          kept = []
+          for line in src.read_text().splitlines():
+              line = line.strip()
+              if not line:
+                  continue
+              try:
+                  row = json.loads(line)
+                  ran_at = row.get("ran_at")
+                  if ran_at and datetime.fromisoformat(ran_at) >= cutoff:
+                      kept.append(line)
+              except Exception:
+                  kept.append(line)  # keep unparseable rows
+          src.write_text("\n".join(kept) + ("\n" if kept else ""))
+          print(f"stats_history rows kept: {len(kept)}")
+          PY
 
       - name: Commit DB changes
         run: |

@@ -99,13 +99,36 @@ def build_report(
             out.append(f"**참고**: {', '.join(_short_id(x, by_id[x].venue if x in by_id else None) for x in refs)}")
         out.append("")
 
-    # Section 4 — References
+    # Section 4 — References, grouped by cluster (M-11)
     out.append("## 4. 참고문헌 (메타DB 기반)")
     out.append("")
-    for p in matched:
-        sid = _short_id(p.get_id(), p.venue)
-        out.append(f"[{sid}] {p.title}, {_authors(p)}, {p.venue or '—'} {p.year or ''} · {p.url}")
-    out.append("")
+    cluster_order: List[str] = []
+    cluster_papers: dict[str, list[Paper]] = {}
+    assigned: set[str] = set()
+    for i, c in enumerate(clusters, 1):
+        name = f"클러스터 {i} — {c.get('name', '')}"
+        cluster_order.append(name)
+        cluster_papers[name] = []
+        for pid in c.get("paper_ids", []) or []:
+            if pid in by_id and pid not in assigned:
+                cluster_papers[name].append(by_id[pid])
+                assigned.add(pid)
+    other = [p for p in matched if p.get_id() not in assigned]
+    if other:
+        cluster_order.append("기타 (클러스터 미분류)")
+        cluster_papers["기타 (클러스터 미분류)"] = other
+
+    for cname in cluster_order:
+        bucket = cluster_papers[cname]
+        if not bucket:
+            continue
+        out.append(f"### {cname} ({len(bucket)})")
+        for p in bucket:
+            sid = _short_id(p.get_id(), p.venue)
+            also = f" · also_in: {','.join(p.also_in)}" if p.also_in else ""
+            out.append(f"- [{sid}] {p.title}, {_authors(p)}, "
+                       f"{p.venue or '—'} {p.year or ''} · {p.url}{also}")
+        out.append("")
 
     # Meta
     out.append("---")

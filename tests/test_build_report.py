@@ -1,14 +1,41 @@
 from datetime import date
 
 from collector.src.models import Paper
-from skills.topic_finder.scripts.build_report import build_report
+from skills.topic_finder.scripts.build_report import build_report, _short_id
+
+
+# ---- M-4: _short_id collision-resistance for non-arxiv papers ----
+
+def test_short_id_arxiv_is_lossless():
+    assert _short_id("arxiv:2604.0001", "arXiv") == "P-2604.0001"
+
+
+def test_short_id_non_arxiv_distinguishes_long_prefix_collisions():
+    """Two title-keyed papers sharing a long prefix produce different short ids
+    (the v0.1 truncation form would have collided)."""
+    a = _short_id("title:a very very long shared prefix that goes on and on but A", "NeurIPS")
+    b = _short_id("title:a very very long shared prefix that goes on and on but B", "NeurIPS")
+    assert a != b
+    assert a.startswith("P-NEURIPS-") and b.startswith("P-NEURIPS-")
+
+
+def test_short_id_non_arxiv_without_venue_falls_back_to_X():
+    sid = _short_id("title:something", venue=None)
+    assert sid.startswith("P-X-")
+
+
+def test_short_id_normalizes_venue_special_chars():
+    """Venues like 'Workshop on …' get punctuation stripped before slugging."""
+    sid = _short_id("title:foo", venue="Workshop @ NeurIPS-2026")
+    # WORKSHOP gets truncated to 8 chars, then capped — first 8 alnum chars uppercased.
+    assert sid.startswith("P-WORKSHOP-")
 
 
 def make_paper(arxiv_id: str, title: str = "T") -> Paper:
     return Paper(title=title, arxiv_id=arxiv_id,
                  published_date=date(2026, 4, 26), source="arxiv",
                  url=f"http://arxiv.org/abs/{arxiv_id}",
-                 venue="arXiv", authors=["A"], year=2026)
+                 venue="arXiv", authors=["A"])
 
 
 def test_build_report_has_all_sections():

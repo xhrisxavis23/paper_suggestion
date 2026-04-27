@@ -63,7 +63,6 @@ class HuggingFaceScraper:
             pdf_url=f"https://arxiv.org/pdf/{arxiv_id}.pdf" if arxiv_id else "",
             arxiv_id=arxiv_id,
             venue="HF",
-            year=fallback_date.year,
             source="hf",
             published_date=fallback_date,
             categories=[],

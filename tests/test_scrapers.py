@@ -73,6 +73,56 @@ def test_hf_fallback_returns_first_nonempty_day():
     assert session.get.call_count == 3
 
 
+# ---- I-4 / M-3: failure surfacing ----
+
+
+def test_scraper_records_failures_on_per_unit_exception(monkeypatch):
+    """When a per-category fetch raises, ArxivScraper records it in self.failures
+    rather than crashing the whole run."""
+    # Skip the courtesy sleep so the test stays fast.
+    monkeypatch.setattr("collector.src.scrapers.arxiv.time.sleep", lambda *a, **kw: None)
+    s = ArxivScraper()
+    def boom(*args, **kwargs):
+        raise RuntimeError("simulated 503")
+    s._fetch_category = boom  # type: ignore[assignment]
+    papers = s.fetch(date(2026, 4, 27))
+    assert papers == []
+    from collector.src.config import ARXIV_CATEGORIES
+    assert len(s.failures) == len(ARXIV_CATEGORIES)
+    assert all("RuntimeError" in f and "simulated 503" in f for f in s.failures)
+
+
+def test_main_run_source_propagates_failures(monkeypatch):
+    """main._run_source aggregates the scraper's self.failures into the stats list."""
+    from collector.main import _run_source
+
+    class FlakyScraper:
+        def __init__(self):
+            self.failures: list[str] = []
+
+        def fetch(self, target_date):
+            self.failures.append("flaky:fake-venue:rate-limited (429)")
+            return []
+
+    papers, src_failures, fatal = _run_source("flaky", FlakyScraper(), date(2026, 4, 27))
+    assert papers == []
+    assert "flaky:fake-venue:rate-limited (429)" in src_failures
+    assert fatal is None
+
+
+def test_main_run_source_marks_fatal_on_uncaught_exception():
+    from collector.main import _run_source
+
+    class BoomScraper:
+        def fetch(self, target_date):
+            raise ConnectionError("DNS down")
+
+    papers, src_failures, fatal = _run_source("boom", BoomScraper(), date(2026, 4, 27))
+    assert papers == []
+    assert src_failures == []
+    assert fatal is not None and "ConnectionError" in fatal and "DNS down" in fatal
+
+
 # ---- Live integration tests (skipped by default) ----
 
 

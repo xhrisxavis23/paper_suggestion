@@ -1,0 +1,4 @@
+# Optional deps for skills/topic_finder/scripts/match_embedding.py (M-2).
+# Heavy (~2 GB with PyTorch). Install only when --match-mode embedding is needed.
+sentence-transformers>=2.2
+faiss-cpu>=1.7

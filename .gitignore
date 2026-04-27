@@ -14,3 +14,12 @@ _backfill.sh
 
 # Per-run pipeline cache (regenerated on each run)
 reports/.cache/
+
+# Local secrets — copy from .env.example to fill in
+.env
+
+# FAISS / sentence-transformers index built lazily by --match-mode embedding
+metadb/.embeddings/
+
+# fcntl advisory lock for RollingDB
+metadb/.lock

@@ -72,7 +72,6 @@ class OpenReviewScraper:
                 pdf_url=pdf_url,
                 arxiv_id=None,
                 venue=venue_short,
-                year=pub_date.year if pub_date else None,
                 source="openreview",
                 published_date=pub_date,
                 categories=[],
