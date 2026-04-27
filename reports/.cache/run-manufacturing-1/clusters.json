@@ -1,0 +1,37 @@
+[
+  {
+    "name": "시각 결함 검출",
+    "description": "산업 표면·부품의 결함을 비전·tomography 기반으로 자동 검출. DDPM·diffusion·foundation 모델·feature fusion 같은 unsupervised/self-supervised 방법이 우세. MVTec·custom 데이터셋이 핵심 벤치마크.",
+    "paper_ids": ["arxiv:2604.19240", "arxiv:2604.19259", "arxiv:2604.19206", "arxiv:2604.10969", "arxiv:2604.09023", "arxiv:2604.07097", "arxiv:2604.05335", "arxiv:2604.05490", "arxiv:2604.03741", "arxiv:2604.03322"],
+    "weekly_count": [4, 3, 3, 0],
+    "top3": ["arxiv:2604.19240", "arxiv:2604.19259", "arxiv:2604.19206"]
+  },
+  {
+    "name": "Predictive Maintenance / PHM",
+    "description": "센서·시계열 데이터로 설비 상태 모니터링·고장 예측. Federated learning·spiking neural net·SPC chart·LLM 에이전트 PHM 벤치마크까지 다양. 항공·전력·반도체·시멘트 등 산업별 응용.",
+    "paper_ids": ["arxiv:2604.19903", "arxiv:2604.19377", "arxiv:2604.13465", "arxiv:2604.08474", "arxiv:2604.02128", "arxiv:2604.16459", "arxiv:2604.15714", "arxiv:2604.01532", "arxiv:2604.06451", "arxiv:2604.12095"],
+    "weekly_count": [3, 3, 4, 0],
+    "top3": ["arxiv:2604.19903", "arxiv:2604.01532", "arxiv:2604.06451"]
+  },
+  {
+    "name": "인간-로봇 협업 생산",
+    "description": "Cobot·AMR·dexterous grasping이 작업장 인간과 공존하며 작업 수행. 안전·피로·공간 인식·계획-할당의 다층 적응이 핵심. 강화학습·diffusion motion·VLM grasping 등 정책 학습 방법.",
+    "paper_ids": ["arxiv:2604.19670", "arxiv:2604.12879", "arxiv:2604.12669", "arxiv:2604.12667", "arxiv:2604.18627", "arxiv:2604.11320", "arxiv:2604.01364", "arxiv:2604.01991"],
+    "weekly_count": [2, 4, 2, 0],
+    "top3": ["arxiv:2604.19670", "arxiv:2604.12669", "arxiv:2604.01364"]
+  },
+  {
+    "name": "AM 물리 surrogate / PINN",
+    "description": "Additive Manufacturing(LPBF·DED·WAAM) 의 열-역학 시뮬레이션을 PINN·neural surrogate로 가속. 데이터 효율성·zero-shot 일반화·privacy preserving 강조. 결함 reasoning 까지 agentic 흐름.",
+    "paper_ids": ["arxiv:2604.16649", "arxiv:2604.14562", "arxiv:2604.04208", "arxiv:2604.05077", "arxiv:2604.09889"],
+    "weekly_count": [2, 1, 2, 0],
+    "top3": ["arxiv:2604.16649", "arxiv:2604.14562", "arxiv:2604.09889"]
+  },
+  {
+    "name": "LLM/Agent 기반 공정 계획",
+    "description": "LLM·multi-agent 가 공정 계획·스케줄링·CAD·문서 추출을 수행. Industry 4.0 의 의사결정 자동화 — RL·SAT·MIQP 같은 고전 최적화에 LLM autoformalize·KG retrieval 접목.",
+    "paper_ids": ["arxiv:2604.21029", "arxiv:2604.16804", "arxiv:2604.16280", "arxiv:2604.10953", "arxiv:2604.01732", "arxiv:2604.07413", "arxiv:2604.06770", "arxiv:2604.15184"],
+    "weekly_count": [1, 3, 3, 1],
+    "top3": ["arxiv:2604.21029", "arxiv:2604.16804", "arxiv:2604.15184"]
+  }
+]

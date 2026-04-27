@@ -1,0 +1,46 @@
+{
+  "passed": [
+    {
+      "id": "A",
+      "type": "between-clusters",
+      "description": "C1(시각 결함 검출)와 C4(AM PINN/surrogate)가 거의 분리되어 있다. 시각 결함 검출은 사후 image-level anomaly score만 출력하고, AM 물리 surrogate는 displacement·temperature를 예측하지만 결함 형성 시점에는 침묵한다. 두 신호를 실시간으로 결합해 결함이 시각으로 보이기 전 단계에서 process parameter 조정으로 막는 closed-loop 시스템이 없음.",
+      "evidence_papers": ["arxiv:2604.19240", "arxiv:2604.16649", "arxiv:2604.14562", "arxiv:2604.09889", "arxiv:2604.04208"],
+      "skeptic_note": "통과 — 2604.09889는 in-situ acoustic+process이지만 PINN 물리 fusion은 없고, 2604.04208은 LPBF 결함 reasoning이지만 retrospective. 어느 클러스터도 PINN-vision real-time 결합을 다루지 않는다."
+    },
+    {
+      "id": "B",
+      "type": "between-clusters",
+      "description": "C2(PHM)와 C3(인간-로봇 협업)이 분리되어 있다. PHM은 설비 health를 추정하지만 그 정보가 task allocation에 들어가지 않고, 인간-로봇 task planning(EBQ&SAP·PF-CD3Q)은 인간 fatigue만 고려하고 robot/sensor degradation은 무시한다.",
+      "evidence_papers": ["arxiv:2604.12669", "arxiv:2604.12667", "arxiv:2604.01532", "arxiv:2604.13465"],
+      "skeptic_note": "통과 — 2604.12667가 fatigue-predictive RL을 하지만 dyad의 robot side는 정적 가정. 2604.01532 PHMForge가 PHM agent 능력을 평가만 하고 task allocation closed-loop은 미포함. Robot health → task planner pipeline은 비어있음."
+    },
+    {
+      "id": "C",
+      "type": "recurring-limitation",
+      "description": "Industrial sensor/image 데이터의 cross-machine·cross-plant 분산이 반복 한계로 명시. Industrial-specific foundation model이 없어 매번 새 plant·machine마다 재학습 필요.",
+      "evidence_papers": ["arxiv:2604.05335", "arxiv:2604.19903", "arxiv:2604.14562", "arxiv:2604.13465"],
+      "skeptic_note": "통과 (보존적) — 2604.05335는 범용 MOMENT를 시도하지만 산업 특화는 아니라고 자체 인정. 2604.19903는 plant간 3-5x 분산을 정량적으로 보고. PINN(2604.14562)이 material-agnostic을 부분 해결하지만 sensor signal까지 통합한 FM은 부재."
+    },
+    {
+      "id": "E",
+      "type": "between-clusters",
+      "description": "LLM/Agent 기반 공정 계획이 cutting·packing·CAD에는 진출했지만 PHM 정보를 받아 maintenance scheduling으로 변환하는 closed-loop 에이전트가 없음. PHMForge가 평가는 하지만 실용 시스템은 부재.",
+      "evidence_papers": ["arxiv:2604.01532", "arxiv:2604.16804", "arxiv:2604.16280", "arxiv:2604.06770"],
+      "skeptic_note": "통과 — PHMForge(2604.01532) task completion 68%로 실용 한계 노출. AutoOR(2604.16804)·KG+LLM(2604.16280)·FlowExtract(2604.06770) 모두 PHM 입력 미지원. PHM→LLM→Schedule end-to-end pipeline 명백히 비어있음."
+    },
+    {
+      "id": "F",
+      "type": "single-shot",
+      "description": "SNN 기반 power converter PHM(2604.15714)이 270x 에너지 절감을 보이지만 후속·확장 0건. 다른 industrial 설비 적용이나 SNN+federated 결합 같은 자연스러운 확장 비어있음.",
+      "evidence_papers": ["arxiv:2604.15714", "arxiv:2604.13465", "arxiv:2604.08474"],
+      "skeptic_note": "통과 — UMW(2604.13465)·aerospace FL(2604.08474) 같은 always-on edge 요구가 명시된 작업이 conventional NN만 쓰고 SNN 시도 안 함. 단발 SNN 결과를 다른 설비로 확장하는 것은 명확한 미개척 영역."
+    }
+  ],
+  "rejected": [
+    {
+      "id": "D",
+      "description": "Defect 합성 데이터 생성·평가 protocol 표준화 부재 — 각 논문마다 자체 augmentation·metric 사용",
+      "reason": "Skeptic 거부: research gap이라기보다 community-infrastructure work에 가까움. FORGE(2604.07413)가 부분적으로 multimodal eval framework를 제시하고 있고, 표준 protocol 자체를 만드는 작업은 단일 연구실의 정면 연구 주제로는 trivial(c). 새 method 제안 없이 benchmark만 만드는 것은 갭 D의 본질."
+    }
+  ]
+}

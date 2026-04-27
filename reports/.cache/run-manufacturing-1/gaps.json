@@ -1,0 +1,44 @@
+[
+  {
+    "id": "A",
+    "type": "between-clusters",
+    "description": "C1(시각 결함 검출)와 C4(AM PINN/surrogate)가 거의 분리되어 있다. 시각 결함 검출은 사후 image-level anomaly score만 출력하고, AM 물리 surrogate는 displacement·temperature를 예측하지만 결함 형성 시점에는 침묵한다. 두 신호를 실시간으로 결합해 결함이 시각으로 보이기 전 단계에서 process parameter 조정으로 막는 closed-loop 시스템이 없음.",
+    "evidence_papers": ["arxiv:2604.19240", "arxiv:2604.16649", "arxiv:2604.14562", "arxiv:2604.09889", "arxiv:2604.04208"],
+    "why_gap": "2604.09889는 in-situ WAAM에서 acoustic+process signal로 defect classify하지만 PINN 물리 예측 fusion은 없고, 2604.16649 FLARE는 displacement만 예측하고 defect와 연결이 안 된다. 두 클러스터가 본질적으로 같은 process를 다른 시각으로 보고 있는데 통합되지 않음."
+  },
+  {
+    "id": "B",
+    "type": "between-clusters",
+    "description": "C2(PHM)와 C3(인간-로봇 협업)이 분리되어 있다. PHM은 설비 health를 추정하지만 그 정보가 task allocation에 들어가지 않고, 인간-로봇 task planning(EBQ&SAP·PF-CD3Q)은 인간 fatigue만 고려하고 robot/sensor degradation은 무시한다. Robot health-aware task scheduling(약화된 cobot에 가벼운 작업 할당) 시도가 0건.",
+    "evidence_papers": ["arxiv:2604.12669", "arxiv:2604.12667", "arxiv:2604.01532", "arxiv:2604.13465"],
+    "why_gap": "2604.12667은 인간 fatigue를 동적으로 추정하지만 robot 상태는 정적으로 가정. 2604.01532 PHMForge는 LLM agent가 PHM tasks를 풀게 하지만 task allocation 결합 시나리오는 미포함. 두 분야 모두 dynamic agent state를 모델링하면서도 partner state는 모델링 안 함."
+  },
+  {
+    "id": "C",
+    "type": "recurring-limitation",
+    "description": "여러 논문이 industrial sensor/image 데이터의 cross-machine·cross-plant 분산을 약점으로 명시. Foundation 모델 pretraining은 일반 도메인(MOMENT 등)에서만 가능하고 industrial-specific foundation model이 없어, 매번 새 plant·machine마다 재학습이 필요한 상황.",
+    "evidence_papers": ["arxiv:2604.05335", "arxiv:2604.19903", "arxiv:2604.14562", "arxiv:2604.13465"],
+    "why_gap": "2604.05335는 MOMENT(범용)로 cross-machine generalization을 얻지만 산업 특화는 아님. 2604.19903는 plant간 prediction error 3-5x 변동 명시. 2604.14562는 material-agnostic을 PINN으로 풀지만 sensor-data foundation은 없음. Industrial Time-series Foundation Model 부재가 반복 한계."
+  },
+  {
+    "id": "D",
+    "type": "recurring-limitation",
+    "description": "Defect 합성 데이터 생성이 각 논문마다 자체 방식(DDPM, Perlin noise, RePaste, FPFNet 등)이고 평가 metric(image AUROC, pixel AUROC, IoU)도 일관되지 않음. 표준 protocol·shared synthetic dataset이 부재해 방법 간 직접 비교가 어렵고 reproducibility 떨어짐.",
+    "evidence_papers": ["arxiv:2604.19240", "arxiv:2604.19259", "arxiv:2604.07097", "arxiv:2604.05490", "arxiv:2604.07413"],
+    "why_gap": "2604.07413 FORGE가 multimodal 평가 dataset을 제안하지만 합성 defect generation 부분은 다루지 않음. 2604.19240 DDPM, 2604.19259 FPFNet, 2604.07097 RePaste 모두 자체 augmentation 정의. Defect-specific synthetic data 표준이 없음."
+  },
+  {
+    "id": "E",
+    "type": "between-clusters",
+    "description": "C5(LLM/Agent 기반 공정 계획)가 cutting/packing/CAD에는 진출했지만 maintenance scheduling closed-loop은 미진. PHMForge(C2)가 LLM agent의 PHM task 능력을 평가만 할 뿐, 실제 LLM이 PHM 신호를 받아 scheduling decision으로 변환하는 end-to-end agent는 없음.",
+    "evidence_papers": ["arxiv:2604.01532", "arxiv:2604.16804", "arxiv:2604.16280", "arxiv:2604.06770"],
+    "why_gap": "2604.01532는 PHMForge benchmark를 만들지만 task completion이 68%에 그쳐 실용적 closed-loop와 거리. 2604.16804 AutoOR는 OR formulation을 잘 하지만 PHM 입력은 미지원. 2604.16280 KG+LLM은 manufacturing 해석에 머물고 scheduling에 미진. PHM→LLM Agent→Schedule pipeline 부재."
+  },
+  {
+    "id": "F",
+    "type": "single-shot",
+    "description": "Spiking Neural Network 기반 power converter health monitoring(2604.15714)이 270x 에너지 절감을 보이지만 후속·확장 연구가 0건. SNN의 다른 industrial 설비(베어링·모터·welding) 적용, 또는 SNN+federated 결합 같은 자연스러운 확장이 비어있음.",
+    "evidence_papers": ["arxiv:2604.15714", "arxiv:2604.13465", "arxiv:2604.08474"],
+    "why_gap": "2604.15714 단일 paper만 SNN을 PHM에 적용. 2604.13465(UMW continual learning), 2604.08474(aerospace FL)는 conventional NN을 사용하면서도 edge·always-on 요구를 가지고 있어 SNN 적용이 자연스러우나 시도 없음."
+  }
+]

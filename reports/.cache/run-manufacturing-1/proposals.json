@@ -1,0 +1,52 @@
+[
+  {
+    "id": 1,
+    "name": "PHYDET",
+    "fills_gap": "A",
+    "hypothesis": "AM 공정에서 PINN 기반 thermo-mechanical surrogate 예측과 in-situ vision 결함 검출을 cross-attention으로 융합하면, 결함이 시각으로 가시화되기 ≥ 5초 전 단계에서 80% 이상 정확도로 결함을 예측해 process parameter를 자동 조정할 수 있다.",
+    "approach": "(1) FLARE 식 displacement surrogate를 process parameter 입력으로 fine-tune해 thermal-mechanical embedding을 추출. (2) DDPM 기반 결함 검출의 visual feature와 PINN embedding을 cross-attention layer로 결합한 PHYDET head가 defect probability + estimated time-to-defect를 동시 출력. (3) 임계 초과 시 Bayesian optimization으로 laser power·deposition velocity를 자동 조정하는 closed-loop. (4) LPBF/WAAM 실험에서 결함 감소율과 lookahead horizon을 측정.",
+    "baselines": "FLARE displacement surrogate, Material-Agnostic PINN AM, Industrial DDPM defect detection, in-situ WAAM agentic monitoring",
+    "expected_contribution": "PINN과 vision 결함 검출의 첫 real-time fusion. 사후 검출이 아닌 사전 예방 closed-loop으로 AM 공정 yield 향상. LPBF/WAAM 양쪽에 일반화 가능한 process-level intervention framework.",
+    "references": ["arxiv:2604.16649", "arxiv:2604.14562", "arxiv:2604.19240", "arxiv:2604.09889", "arxiv:2604.04208"]
+  },
+  {
+    "id": 2,
+    "name": "DYNDUO",
+    "fills_gap": "B",
+    "hypothesis": "Robot의 PHM 신호(bearing wear·motor current·thermal margin)를 task allocator의 state에 포함하면 dyad-level(인간 fatigue + 로봇 health) cumulative degradation이 30% 감소하면서 production throughput은 ±5% 이내로 보존된다.",
+    "approach": "(1) PF-CD3Q의 fatigue particle filter 옆에 Kalman filter 기반 robot PHM estimator를 병렬 배치해 dyad state {human_fatigue, robot_health}를 구성. (2) Constrained dueling DQN을 dyad-state로 확장 — robot health 임계 미달 시 무거운 작업 action을 mask. (3) PHMForge의 bearing/motor/gearbox scenario를 manufacturing 셀 시뮬레이션에 embed. (4) 32명 user study(EBQ&SAP 패턴)로 효율·주관 만족도 평가.",
+    "baselines": "PF-CD3Q safe RL, EBQ&SAP hierarchical TPA, PHMForge benchmark, RAPIDDS spatio-temporal adaptation",
+    "expected_contribution": "Human-robot 협업 최초의 dyad-state(둘 다 동적 health 모델) 정책. Robot durability 향상 + 예방 정비 cost 절감 동시 검증. Industry 5.0의 human-centric ergonomics 정의를 robot health까지 확장.",
+    "references": ["arxiv:2604.12667", "arxiv:2604.12669", "arxiv:2604.01532", "arxiv:2604.19670"]
+  },
+  {
+    "id": 3,
+    "name": "INDUS-FM",
+    "fills_gap": "C",
+    "hypothesis": "다중 plant·다중 sensor type(vibration·current·acoustic·image)으로 self-supervised pretraining한 industrial foundation model은 downstream defect/health task에서 fine-tuning sample 100건만으로 plant-specific full-train과 동등 이상 성능(F1 격차 ≤ 0.03)을 낸다.",
+    "approach": "(1) 공개 multi-plant 데이터(C-MAPSS, MVTec, SAMSON cavitation 4건, MIMII 등)를 통합한 IndusCorpus 구축. (2) Masked autoencoding + multi-modal contrastive (image-time series-tabular 3-way alignment) pretraining. (3) Encoder freeze → light adapter fine-tune. (4) Cement multi-plant (3-5x 분산), Cross-machine anomaly, UMW unknown fault 세 벤치마크에서 few-shot 평가. (5) Federated variant도 비교.",
+    "baselines": "MOMENT (general TS FM), Cross-Machine Anomaly (2604.05335 자체 baseline), Cement Multi-Plant ML, Material-Agnostic PINN, Adaptive UMW continual",
+    "expected_contribution": "산업 특화 첫 multi-modal foundation model. Plant간 3-5x 분산을 < 1.5x로 축소 목표. Privacy-preserving variant까지 검증해 collaborative pretraining 가능성 입증.",
+    "references": ["arxiv:2604.05335", "arxiv:2604.19903", "arxiv:2604.14562", "arxiv:2604.13465"]
+  },
+  {
+    "id": 4,
+    "name": "PHMAGENT",
+    "fills_gap": "E",
+    "hypothesis": "PHM 시계열을 LLM-friendly patch token으로 인코딩한 후 ReAct 스타일 agent가 RUL·cost·safety constraint를 보고 maintenance schedule을 출력하면, PHMForge 현재 baseline 68% 대비 task completion 85% 이상을 달성한다.",
+    "approach": "(1) PHM time series → patch tokens (1초 windows × 3 modalities). (2) AutoOR 식 RL post-training으로 8B LLM에 schedule formulation 능력 주입. (3) MCP tool: simulator, cost calculator, MTBF predictor, RUL estimator. (4) PHMForge 75 scenario(turbofan/bearing/motor/gearbox)에서 single-shot ReAct vs PHMAGENT closed-loop 비교. (5) Ablation: patch token 없이 raw text vs token 비교.",
+    "baselines": "PHMForge (Claude Sonnet 4 / GPT-4o / Granite 3.0-8B), AutoOR LLM autoformalize, KG+LLM Manufacturing interpretability, FlowExtract procedural KG",
+    "expected_contribution": "PHM-conditioned LLM agent의 첫 closed-loop 시스템. PHMForge SOTA. PHM token encoder는 다른 산업 LLM agent에도 재사용 가능한 모듈로 공개.",
+    "references": ["arxiv:2604.01532", "arxiv:2604.16804", "arxiv:2604.16280", "arxiv:2604.06770"]
+  },
+  {
+    "id": 5,
+    "name": "SPYRO-PHM",
+    "fills_gap": "F",
+    "hypothesis": "Power converter용 SNN 아키텍처(2604.15714)를 ultrasonic metal welding의 multi-sensor 입력으로 확장하면, conventional MLP baseline 대비 fault detection accuracy ≥ 95%를 유지하면서 inference energy를 ≥ 100x 절감해 always-on edge 배포가 가능하다.",
+    "approach": "(1) LIF SNN encoder를 4-modal(current·voltage·acoustic·force)로 확장하고 differentiable ODE physics loss 유지. (2) Spike-rate 기반 unknown fault detector — 2604.13465의 hidden-layer threshold를 SNN spike sparsity로 대체. (3) Federated SNN (2604.08474 inspired): spike sparsity 보존 가능한 quantized aggregation. (4) Loihi 2/Akida 하드웨어 측정으로 energy·throughput 정량화.",
+    "baselines": "Neuromorphic SNN power converter (원 paper), Adaptive UMW continual learning, Aerospace federated quantization (INT4)",
+    "expected_contribution": "SNN-PHM의 power converter 너머 일반화. Always-on edge industrial monitoring 실용성 입증. Federated SNN 첫 사례 + spike sparsity와 communication efficiency의 trade-off 정량화.",
+    "references": ["arxiv:2604.15714", "arxiv:2604.13465", "arxiv:2604.08474"]
+  }
+]
