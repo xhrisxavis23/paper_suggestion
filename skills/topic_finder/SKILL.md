@@ -16,9 +16,10 @@ all citing only papers present in the DB (no hallucinated references).
 
 - `metadb/<YYMM>_rolling.jsonl` files exist (run `python -m collector.main` first if not).
 - Python 3.11+ on PATH.
-- Claude Sonnet 4.6 — this skill is intentionally Sonnet-tuned for cost.
+- Default LLM is Claude Sonnet 4.6. v0.4 adds Gemini routing (`--model gemini-pro|gemini-flash`) for cost reduction; see "Backend selection" below.
 - For embedding mode (`--match-mode embedding`): `pip install -r collector/requirements-embedding.txt`.
-- For prompt-cached SDK mode: `pip install anthropic` and `ANTHROPIC_API_KEY` set. Without these, the pipeline still works via Claude Code CLI but skips explicit `cache_control`.
+- For Anthropic prompt-cached SDK mode: `pip install anthropic` and `ANTHROPIC_API_KEY` set. Without these, the Sonnet path falls back to Claude Code CLI and skips explicit `cache_control`.
+- For Gemini SDK mode: `pip install google-genai` and `GOOGLE_API_KEY` set (https://aistudio.google.com/apikey). Gemini path uses `cached_content` for the matched-papers prefix — same I-3 saving as Anthropic ephemeral cache.
 
 ## Arguments
 
@@ -31,8 +32,9 @@ Parsed from `/find-topic "<keyword>" [options...]`:
 | `--clusters K` | 5 | Number of clusters Trend-Analyzer should output |
 | `--proposals P` | 5 | Number of proposals Proposer should output |
 | `--window D` | 60 | Rolling window days (must be ≤ DB window). Mapped to `--window-days D` on the match script. |
-| `--max-papers M` | 200 | Hard cap on papers passed into the 4-bot pipeline (ranked by date desc + venue weight). Bounds Sonnet 200K context. |
+| `--max-papers M` | 200 | Hard cap on papers passed into the 4-bot pipeline (ranked by `(venue_weight DESC, date DESC)` — top-tier venues outrank arXiv-only). Bounds Sonnet 200K context. |
 | `--match-mode` | `substring` | `substring` (default) or `embedding` (sentence-transformers + FAISS, opt-in heavyweight) |
+| `--model` | `sonnet` | `sonnet` / `gemini-pro` / `gemini-flash`. Selects the LLM for the 4-bot pipeline. v0.4: default still `sonnet` until 5-run regression on Gemini passes. |
 | `--expand-only` | off | Stop after keyword expansion + match (debug) |
 | `--dry-run` | off | Show match count + token estimate then stop |
 | `--output <path>` | `reports/YYYY-MM-DD-<slug>.md` | Output path |
@@ -55,7 +57,7 @@ python -m skills.topic_finder.scripts.match_substring \
     --max-papers <M>
 ```
 
-`--window-days` filters by `published_date ≥ today − D days`. `--max-papers` ranks the matched set by `(published_date DESC, venue_weight DESC)` and keeps the top M; venue weights live in `match_substring.py:_VENUE_WEIGHT` (top-tier venues outrank arXiv-only). The CLI prints `capped from <N>` when the cap activates.
+`--window-days` filters by `published_date ≥ today − D days`. `--max-papers` ranks the matched set by `(venue_weight DESC, published_date DESC)` and keeps the top M; venue weights live in `match_substring.py:_VENUE_WEIGHT` (top-tier venues outrank arXiv-only). The CLI prints `capped from <N>` when the cap activates.
 
 **Embedding mode** (`--match-mode embedding`, opt-in):
 ```bash
@@ -73,9 +75,9 @@ Show the user:
 **Topic:** "<keyword>"
 **Expanded keywords:** [...]
 **매칭 논문:** <N>건 (rolling <D>d)  ← if N > <M>, "(capped from <N> to <M>)"
-**클러스터 K = <K>, 제안 P = <P>, Sonnet 4.6**
+**클러스터 K = <K>, 제안 P = <P>, 모델 = <model>**
 **예상 토큰:** ~150K input, ~25K output
-**예상 비용:** ~600원
+**예상 비용:** Sonnet ≈ ~600원 / Gemini Pro ≈ ~250원 / Gemini Flash ≈ ~50원 (캐싱 가정)
 
 Approve / 수정 / abort
 ```
@@ -92,20 +94,31 @@ If `--expand-only`: stop after §3 print without §4–§7.
 
 Each bot reads its prompt from `prompts/`, fills in `{TOPIC}`, and is given the same `matched.jsonl` block (id, title, abstract truncated to 1500 chars, venue, date) as static input.
 
-**Prompt caching (I-3)**: the matched-papers JSON block is identical across all four bots. Mark it as `cache_control={"type": "ephemeral"}` in the SDK call so it's cached after Trend-Analyzer's call and re-used by Gap-Hunter / Skeptic / Proposer. Empirically saves ~50% of input tokens billed (matched-papers is the bulk of input).
+**Recommended path (v0.4)** — delegate the four bot calls to the packaged driver:
 
-When using the SDK, structure each call as:
-```python
-client.messages.create(
-    model="claude-sonnet-4-6",
-    system=[
-        {"type": "text", "text": <bot prompt>},
-        {"type": "text", "text": <matched papers JSON>,
-         "cache_control": {"type": "ephemeral"}},
-    ],
-    messages=[{"role": "user", "content": <bot-specific user block>}],
-)
+```bash
+python -m skills.topic_finder.scripts.run_pipeline "<keyword>" \
+    --window-days <D> --clusters <K> --proposals <P> \
+    --max-papers <M> --model {sonnet|gemini-pro|gemini-flash}
 ```
+
+The driver handles backend selection, prompt caching, retry-on-bad-JSON, per-bot token telemetry, and writes the report directly. Use this whenever Anthropic SDK + key (Sonnet) or `google-genai` + `GOOGLE_API_KEY` (Gemini) is available. If neither is set, run the bots inline with the Sonnet CLI snippet below.
+
+**Prompt caching (I-3)**: the matched-papers JSON block is identical across all four bots, so each backend caches it once and re-uses across the 3 follow-up calls. Empirically saves ~50% of input tokens billed.
+
+- **Sonnet (Anthropic)** — cache via `cache_control={"type": "ephemeral"}`:
+  ```python
+  client.messages.create(
+      model="claude-sonnet-4-6",
+      system=[
+          {"type": "text", "text": <bot prompt>},
+          {"type": "text", "text": <matched papers JSON>,
+           "cache_control": {"type": "ephemeral"}},
+      ],
+      messages=[{"role": "user", "content": <bot-specific user block>}],
+  )
+  ```
+- **Gemini (Google)** — explicit `cached_content` with `ttl="3600s"` seeded once before Trend, then passed via `GenerateContentConfig(cached_content=cache.name)` for every bot. Min cacheable tokens: pro 4096 / flash 1024 — matched-papers block at `--max-papers 200` is ~50–75K tokens, well above both. Always `client.caches.delete(cache.name)` in a `finally:` block.
 
 Save outputs to:
 - `clusters.json` (Trend-Analyzer)

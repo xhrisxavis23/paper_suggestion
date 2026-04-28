@@ -87,14 +87,15 @@ pytest -m integration                             # live network tests
 ## Skill / pipeline gotchas
 
 - **Token budget (I-1)**: `match_substring(..., max_papers=N)` sorts by `(venue_weight DESC, published_date DESC)` and slices to N. Top-tier venue papers (NeurIPS/ICML/ICLR/CVPR=5; ACL/EMNLP/NAACL/ECCV/ICCV/KDD=4; AAAI=3; HF/arXiv=2; default=1) survive the cap regardless of recency, then arXiv-tier ties break by date. Default cap is 200, which fits within Sonnet 200K context. Without the cap, popular topics ("rag", "agent") return 3K-6K matches → ~1M-2M token prompts that OOM. Always pass `--max-papers` from `/find-topic`.
-- **Prompt caching (I-3)**: the matched-papers JSON block is identical across all 4 bots. SDK calls mark it as `cache_control={"type": "ephemeral"}` so it's cached after Trend-Analyzer's call → ~50% input-token savings on the 3 subsequent calls. Falls back to plain CLI calls if `ANTHROPIC_API_KEY` / `anthropic` SDK is missing.
+- **Prompt caching (I-3)**: the matched-papers JSON block is identical across all 4 bots. SDK calls mark it as `cache_control={"type": "ephemeral"}` (Anthropic) or seed a `cached_content` once and pass `cached_content=cache.name` (Gemini, v0.4) so it's cached after Trend-Analyzer's call → ~50% input-token savings on the 3 subsequent calls. Falls back to plain CLI calls if `ANTHROPIC_API_KEY` / `anthropic` SDK is missing.
+- **Backend selection (v0.4 I-3)**: `/find-topic --model {sonnet|gemini-pro|gemini-flash}`. Sonnet uses anthropic SDK with `cache_control`; Gemini uses `google-genai` with explicit `cached_content` (TTL 1h, deleted in `finally:`). Default stays `sonnet` until 5-run regression on Gemini passes. Prices live in `skills/topic_finder/scripts/run_pipeline.py:_PRICES` and the driver writes per-bot token totals + USD estimate to `reports/.cache/<run-id>/usage.json`.
 - **`--window D`** on `/find-topic` maps to `--window-days D` on the match scripts.
 - **`period_count` (renamed from `weekly_count`)**: Trend-Analyzer now buckets clusters into 4 equal slices of the actual data date range (not fixed 7-day weeks), and `build_report` labels them 주차별/월별/분기별/구간별 based on bucket size. Reading older reports: `weekly_count` is still accepted as fallback in `build_report.py`.
 - **`_short_id` format**: arxiv IDs render as `P-<arxiv-id>` (lossless); non-arxiv as `P-<VENUE>-<6hex>` (collision-resistant).
 - **Author truncation**: ≤3 authors render verbatim; 4+ render as "first three, et al.".
 - **`Paper.categories`** is currently arxiv-only. HF / OpenReview / S2 leave it `[]` — any future category-based filter must handle this.
 - **Embedding mode** (`--match-mode embedding`) is opt-in heavyweight. Install `collector/requirements-embedding.txt` (sentence-transformers + faiss-cpu, ~2 GB with PyTorch). First run builds the index at `metadb/.embeddings/` (~30s for 30K papers).
-- **4-bot pipeline orchestration** is documented in `skills/topic_finder/SKILL.md` (read it!). For non-interactive verification, `_run_pipeline.py` is a local driver (gitignored) that supports both SDK (cache_control) and CLI fallback.
+- **4-bot pipeline orchestration** is documented in `skills/topic_finder/SKILL.md` (read it!). The packaged driver `python -m skills.topic_finder.scripts.run_pipeline <topic> --model {sonnet|gemini-pro|gemini-flash}` shipped in v0.4 handles backend selection, prompt caching, retry-on-bad-JSON, per-bot token telemetry, and report write. The older `_run_pipeline.py` at repo root is a gitignored personal driver (Sonnet only, kept for parity).
 
 ## Style
 
