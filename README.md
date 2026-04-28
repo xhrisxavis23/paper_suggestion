@@ -1,12 +1,12 @@
 # paper_suggestion
 
-연구 주제 발굴 봇 — 사용자 키워드를 받아 최근 60일 학계 논문 메타데이터를 분석해 **트렌드 → 갭 → 연구 제안** 보고서를 자동 생성합니다.
+연구 주제 발굴 봇 — 사용자 키워드를 받아 최근 학계 논문 메타데이터를 분석해 **트렌드 → 갭 → 연구 제안** 보고서를 자동 생성합니다.
 
-현재 버전: **v0.3** ([backlog 17개 항목 모두 반영](docs/plans/v0.3-backlog.md), 토큰 예산 강제, prompt caching, 백필 CLI, opt-in S2/OR)
+현재 버전: **v0.3** ([backlog 17개 항목 모두 반영](docs/plans/v0.3-backlog.md), 토큰 예산 강제, prompt caching, 백필 CLI, opt-in S2/OR). v0.3 마무리 패치로 **rolling window 500일 + 12개 학회 venue + arxiv 재시도 로직** 반영. 다음 마일스톤은 [v0.4-backlog.md](docs/plans/v0.4-backlog.md).
 
 ## 구조
 
-- **Layer 1: Collector** (Python CLI / cron) — 매일 arXiv·HF 메타데이터 수집 (S2/OR는 `--with-s2` / `--with-or` 옵트인). **60일 rolling DB** 유지, `metadb/<YYMM>_rolling.jsonl`로 월별 분할.
+- **Layer 1: Collector** (Python CLI / cron) — 매일 arXiv·HF 메타데이터 수집 (S2/OR는 `--with-s2` / `--with-or` 옵트인). **500일 rolling DB** 유지 (2025-01-01 이후 데이터 보존), `metadb/<YYMM>_rolling.jsonl`로 월별 분할.
 - **Layer 2: topic-finder skill** (Claude Code) — 사용자 키워드 → 매칭 (substring 또는 embedding) → top-200 cap → 4봇 회의 (Trend → Gap → Skeptic → Proposer, prompt cached) → Markdown 보고서.
 
 자세한 설계: [docs/specs/2026-04-26-paper-suggestion-design.md](docs/specs/2026-04-26-paper-suggestion-design.md)
@@ -20,10 +20,10 @@ cd paper_suggestion
 python -m venv .venv && source .venv/bin/activate
 pip install -r collector/requirements.txt pytest
 cp .env.example .env             # SEMANTIC_SCHOLAR_API_KEY / ANTHROPIC_API_KEY 채우기 (선택)
-pytest                           # 36 unit tests should pass
+pytest                           # 40 unit tests should pass
 
-# 첫 클론이면 60일 백필
-python -m collector.backfill --days 60
+# 첫 클론이면 16개월치 백필 (2025-01-01부터)
+python -m collector.backfill --start 2025-01-01 --end "$(date +%F)" --with-or
 
 # (선택) 임베딩 매칭 사용 시
 pip install -r collector/requirements-embedding.txt   # sentence-transformers + faiss-cpu (~2GB)
@@ -41,11 +41,11 @@ python -m collector.main --date 2026-04-20
 # Semantic Scholar 포함 (API key 필요)
 python -m collector.main --with-s2
 
-# OpenReview 포함 (config의 venue id가 active해야 의미 있음)
+# OpenReview 포함 (12개 venue 사전 등록 — AAAI/ACL/NAACL/EMNLP/IJCNLP/IJCAI/CVPR/ICCV/KDD/ICLR/ICML/NeurIPS)
 python -m collector.main --with-or
 
-# 백필
-python -m collector.backfill --start 2026-02-26 --end 2026-04-27
+# 백필 — OR/S2는 target_date 무시하므로 루프 시작 시 1번만 fetch (one-shot)
+python -m collector.backfill --start 2025-01-01 --end 2026-04-27 --with-or
 python -m collector.backfill --days 30 --with-s2
 ```
 
@@ -55,7 +55,9 @@ python -m collector.backfill --days 30 --with-s2
 - `metadb/stats.json` — 마지막 실행 스냅샷
 - `metadb/stats_history.jsonl` — append-only 이력 (CI가 90일 초과분 청소)
 
-자동 실행은 `.github/workflows/daily_collect.yml`이 매일 06:00 UTC에 처리 (pytest 게이트 통과 후 commit).
+자동 실행:
+- `.github/workflows/daily_collect.yml` — GitHub Actions 매일 06:00 UTC (pytest 게이트 통과 후 commit)
+- 로컬 cron 옵션: `0 6 * * * cd <repo> && .venv/bin/python -m collector.main --with-or >> cron_collect.log 2>&1` (시스템 TZ가 KST면 06:00 KST)
 
 ## Layer 2 사용 — 연구 주제 보고서 생성
 
@@ -107,7 +109,7 @@ Claude Code 내에서:
 ## 개발
 
 ```bash
-pytest                       # 36 unit tests, 0.1s
+pytest                       # 40 unit tests, 0.1s
 pytest -m integration        # 네트워크 호출 (slow, deselected by default)
 ```
 
@@ -141,6 +143,12 @@ python -m skills.topic_finder.scripts.match_embedding \
 - M-1 주말 digest skip / M-2 embedding match (opt-in) / M-3-4 missing test coverage / M-5 cache auto-prune
 - M-6 concurrent scrapers / M-7 pytest in CI / M-8 `Paper.year` derived / M-9 `.env.example`
 - M-10 `also_in` HF/arxiv merge / M-11 bibliography grouped by cluster / M-12 file lock for concurrent writers
+
+**v0.3 마무리 패치** (post-shipping)
+- Rolling window 60일 → **500일** (2025-01-01 이후 데이터 보존, conference 학회 cycle 1번 이상 포함)
+- OR venue 1개 → **12개** (dblp.org/conf/ 패턴으로 비-OR-native 학회 metadata 가져옴 + ICLR/ICML/NeurIPS OR-native)
+- Backfill 리팩터: OR/S2를 per-day가 아닌 **one-shot** 호출 (482일 × OR 호출 = ~5h 절감)
+- arXiv 429/5xx/Timeout **재시도** with exponential backoff (5/15/45/90s)
 
 전체 변경 내역은 [docs/plans/v0.3-backlog.md](docs/plans/v0.3-backlog.md) 참고.
 

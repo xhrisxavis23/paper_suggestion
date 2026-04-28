@@ -23,3 +23,6 @@ metadb/.embeddings/
 
 # fcntl advisory lock for RollingDB
 metadb/.lock
+
+# Local cron collect log — see crontab -l
+cron_collect.log
