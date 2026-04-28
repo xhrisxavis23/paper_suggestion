@@ -242,8 +242,8 @@ def estimate_cost(usage_log: list) -> dict:
 
 # ------------------------------- Pipeline ----------------------------------
 
-def main(topic: str, *, window_days: int = 100, k_clusters: int = 5,
-         p_proposals: int = 5, max_papers: int = 100,
+def main(topic: str, *, window_days: int = 100, k_clusters: int = 3,
+         p_proposals: int = 3, max_papers: int = 100,
          keywords_file: Path | None = None,
          model: str = "gemini-flash") -> Path:
     _load_dotenv()
@@ -473,8 +473,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("topic")
     ap.add_argument("--window-days", type=int, default=100)
-    ap.add_argument("--clusters", type=int, default=5)
-    ap.add_argument("--proposals", type=int, default=5)
+    ap.add_argument("--clusters", type=int, default=3)
+    ap.add_argument("--proposals", type=int, default=3)
     ap.add_argument("--max-papers", type=int, default=100)
     ap.add_argument("--model", default="gemini-flash",
                     choices=["sonnet", "gemini-pro", "gemini-flash"],

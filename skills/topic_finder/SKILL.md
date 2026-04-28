@@ -28,8 +28,8 @@ Parsed from `/find-topic "<keyword>" [options...]`:
 | Arg | Default | Notes |
 |-----|---------|-------|
 | `<keyword>` | (required) | User's topic, free-form quoted string |
-| `--clusters K` | 5 | Number of clusters Trend-Analyzer should output |
-| `--proposals P` | 5 | Number of proposals Proposer should output |
+| `--clusters K` | 3 | Number of clusters Trend-Analyzer should output |
+| `--proposals P` | 3 | Number of proposals Proposer should output |
 | `--window D` | 100 | Rolling window days (must be ≤ DB window). Mapped to `--window-days D` on the match script. |
 | `--max-papers M` | 100 | Hard cap on papers passed into the 4-bot pipeline (ranked by `(venue_weight DESC, date DESC)` — top-tier venues outrank arXiv-only). 100 is the v0.4 default; the pipeline can scale up to ~200 within Sonnet's 200K context if you bump it. |
 | `--match-mode` | `substring` | `substring` (default) or `embedding` (sentence-transformers + FAISS, opt-in heavyweight) |
