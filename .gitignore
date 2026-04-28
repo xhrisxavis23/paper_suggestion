@@ -24,6 +24,10 @@ metadb/.embeddings/
 # v0.4 I-1: PDF body cache for --deep (immutable per paper id)
 metadb/.pdfs/
 
+# v0.4 I-1 archive: per-report PDF folders hardlinked from metadb/.pdfs/.
+# The .md report itself stays committed; the bulky binary bundle does not.
+reports/*/
+
 # fcntl advisory lock for RollingDB
 metadb/.lock
 

@@ -95,6 +95,11 @@ def _cache_path(paper_id: str, cache_dir: Path) -> Path:
     return cache_dir / (_cache_key(paper_id) + ".json")
 
 
+def _pdf_path(paper_id: str, cache_dir: Path) -> Path:
+    """Raw PDF bytes lives next to the extracted-sections JSON, same key."""
+    return cache_dir / (_cache_key(paper_id) + ".pdf")
+
+
 def _strip_after_refs(text: str) -> str:
     """Truncate text at the first References / Bibliography / Appendix
     heading we find — body content rarely lives past those."""
@@ -182,25 +187,43 @@ def fetch_pdf(paper: "Paper") -> bytes | None:
         return None
 
 
-def get_or_fetch(paper: "Paper", cache_dir: Path) -> dict | None:
+def get_or_fetch(paper: "Paper", cache_dir: Path,
+                 *, ensure_raw_pdf: bool = False) -> dict | None:
     """Return cached entry {sections, fetched_at, source} or fetch+cache.
-    None if fetch failed or PDF was unparseable."""
+    None if fetch failed or PDF was unparseable.
+
+    Sections (JSON) and raw bytes (PDF) are cached side-by-side in cache_dir
+    keyed by `_cache_key(paper.get_id())`. With ``ensure_raw_pdf=True`` we
+    *lazily upgrade* old cache entries that only have sections (pre-archive
+    feature) by refetching the PDF, so downstream archive-to-report can
+    hardlink the bytes."""
     cache_dir.mkdir(parents=True, exist_ok=True)
     pid = paper.get_id()
-    cpath = _cache_path(pid, cache_dir)
-    if cpath.exists():
+    jpath = _cache_path(pid, cache_dir)
+    pdf_path = _pdf_path(pid, cache_dir)
+    if jpath.exists():
         try:
-            return json.loads(cpath.read_text(encoding="utf-8"))
+            entry = json.loads(jpath.read_text(encoding="utf-8"))
         except Exception:  # noqa: BLE001 — corrupted cache; refetch below
-            cpath.unlink(missing_ok=True)
+            jpath.unlink(missing_ok=True)
+            entry = None
+        if entry is not None:
+            if ensure_raw_pdf and not pdf_path.exists():
+                raw = fetch_pdf(paper)
+                if raw:
+                    pdf_path.write_bytes(raw)
+            return entry
     pdf = fetch_pdf(paper)
     if pdf is None:
         return None
+    pdf_path.write_bytes(pdf)
     try:
         text = extract_text(pdf)
-    except Exception:  # noqa: BLE001 — malformed PDF; skip
+    except Exception:  # noqa: BLE001 — malformed PDF; drop bytes, return None
+        pdf_path.unlink(missing_ok=True)
         return None
     if not text:
+        pdf_path.unlink(missing_ok=True)
         return None
     entry = {
         "id": pid,
@@ -209,17 +232,20 @@ def get_or_fetch(paper: "Paper", cache_dir: Path) -> dict | None:
         "fetched_at": int(time.time()),
         "source": paper.pdf_url,
     }
-    cpath.write_text(json.dumps(entry, ensure_ascii=False), encoding="utf-8")
+    jpath.write_text(json.dumps(entry, ensure_ascii=False), encoding="utf-8")
     return entry
 
 
 def build_deep_context(papers: list["Paper"], *, k: int = 10,
-                       cache_dir: Path = CACHE_DIR_DEFAULT) -> tuple[str, dict]:
+                       cache_dir: Path = CACHE_DIR_DEFAULT,
+                       ensure_raw_pdf: bool = True) -> tuple[str, dict]:
     """Build the markdown deep_context block fed to Skeptic + Proposer.
 
     Returns (text, stats) where stats has counts of fetched/cached/failed
     so the caller can surface a one-line summary in CLI output and report
-    metadata."""
+    metadata. ``ensure_raw_pdf=True`` (the default once archive-to-report
+    landed) means cache entries missing raw bytes are lazily upgraded so
+    the archive step has something to hardlink."""
     from skills.topic_finder.scripts.build_report import _short_id  # re-use id rendering
     out: list[str] = ["## Deep PDF context (top-{k} matched papers, sectioned)\n".format(k=k)]
     stats = {"requested": min(k, len(papers)), "ok": 0, "cached_hit": 0,
@@ -227,7 +253,7 @@ def build_deep_context(papers: list["Paper"], *, k: int = 10,
     for p in papers[:k]:
         cpath = _cache_path(p.get_id(), cache_dir)
         was_cached = cpath.exists()
-        entry = get_or_fetch(p, cache_dir)
+        entry = get_or_fetch(p, cache_dir, ensure_raw_pdf=ensure_raw_pdf)
         if entry is None:
             stats["failed"] += 1
             continue
@@ -248,6 +274,62 @@ def build_deep_context(papers: list["Paper"], *, k: int = 10,
             out.append(txt)
         out.append("")
     return "\n".join(out), stats
+
+
+def archive_to_report(papers: list["Paper"], *, cache_dir: Path,
+                      archive_dir: Path) -> dict:
+    """Hardlink raw PDFs from cache_dir into archive_dir/<short-id>.pdf
+    and write archive_dir/manifest.json describing what's there.
+
+    Hardlinks need same filesystem; we fall back to ``shutil.copy2`` on
+    cross-FS (EXDEV) so the archive still works on weird mounts. Skip
+    silently when a paper has no raw bytes in cache (e.g. a fetch attempt
+    that hit a 4xx); the manifest records it as ``raw_pdf: missing``."""
+    import os
+    import shutil
+
+    from skills.topic_finder.scripts.build_report import _short_id
+
+    archive_dir.mkdir(parents=True, exist_ok=True)
+    manifest: list[dict] = []
+    stats = {"linked": 0, "copied": 0, "missing": 0}
+    for p in papers:
+        pid = p.get_id()
+        src = _pdf_path(pid, cache_dir)
+        sid = _short_id(pid, p.venue)
+        entry: dict = {
+            "id": pid, "short_id": sid, "title": p.title,
+            "venue": p.venue, "date": (p.published_date.isoformat()
+                                       if p.published_date else None),
+            "source_url": p.pdf_url,
+        }
+        if not src.exists():
+            entry["raw_pdf"] = "missing"
+            stats["missing"] += 1
+            manifest.append(entry)
+            continue
+        dst = archive_dir / f"{sid}.pdf"
+        if dst.exists():
+            entry["raw_pdf"] = dst.name
+            entry["linked"] = "already_present"
+            manifest.append(entry)
+            continue
+        try:
+            os.link(src, dst)  # hardlink — same-FS, no extra disk
+            stats["linked"] += 1
+            entry["linked"] = "hardlink"
+        except OSError:  # cross-FS or permission — fall back to copy
+            shutil.copy2(src, dst)
+            stats["copied"] += 1
+            entry["linked"] = "copy"
+        entry["raw_pdf"] = dst.name
+        manifest.append(entry)
+    (archive_dir / "manifest.json").write_text(
+        json.dumps({"papers": manifest, "stats": stats},
+                   ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return stats
 
 
 if __name__ == "__main__":

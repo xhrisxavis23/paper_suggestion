@@ -169,7 +169,10 @@ def call_gemini_sdk(ctx: GeminiCtx, *, system: str, user_block: str,
         config=ctx.types.GenerateContentConfig(
             cached_content=ctx.cache_name,
             response_mime_type="application/json",
-            max_output_tokens=16384,
+            # Flash dumps every paper_id per cluster; with K=3 over 100
+            # matched papers, trend output can run 20K+ tokens. 32K is
+            # within both pro and flash limits and adds no idle cost.
+            max_output_tokens=32768,
         ),
     )
     um = getattr(resp, "usage_metadata", None)
@@ -370,20 +373,46 @@ def main(topic: str, *, window_days: int = 100, k_clusters: int = 3,
         + json.dumps(papers_to_context(matched), ensure_ascii=False)
     )
 
+    # Compute report stem early so we can use it as the PDF archive folder
+    # name. Mirrors the slug+suffix logic used at report-write time below.
+    today_for_stem = date.today()
+    slug = topic.lower().replace(" ", "-")
+    suffix_parts: list[str] = []
+    if model != "sonnet":
+        suffix_parts.append(model)
+    if deep:
+        suffix_parts.append("deep")
+    report_suffix = ("-" + "-".join(suffix_parts)) if suffix_parts else ""
+    report_stem = f"{today_for_stem.isoformat()}-{slug}{report_suffix}"
+
     # I-1 (--deep): pull PDFs for top-deep_k matched papers, extract sections,
     # build a deep_context block. Skeptic / Proposer get this in addition to
     # the cached metadata; Trend / Gap stay metadata-only by design.
     deep_context = ""
     deep_stats: dict = {}
+    archive_stats: dict = {}
+    pdf_cache_dir = REPO_ROOT / "metadb" / ".pdfs"
     if deep:
-        from skills.topic_finder.scripts.pdf_extract import build_deep_context
+        from skills.topic_finder.scripts.pdf_extract import (
+            archive_to_report, build_deep_context,
+        )
         deep_context, deep_stats = build_deep_context(
-            matched, k=deep_k, cache_dir=REPO_ROOT / "metadb" / ".pdfs")
+            matched, k=deep_k, cache_dir=pdf_cache_dir, ensure_raw_pdf=True)
         print(f"[deep] PDFs: requested={deep_stats['requested']} "
               f"ok={deep_stats['ok']} (cached={deep_stats['cached_hit']} "
               f"fetched={deep_stats['fetched']}) failed={deep_stats['failed']}, "
               f"deep_context={len(deep_context):,} chars")
         (cache / "deep_context.md").write_text(deep_context, encoding="utf-8")
+
+        # Archive raw PDFs into reports/<stem>/ via hardlinks (same FS) so
+        # users can browse the source bundle alongside the markdown report.
+        archive_dir = REPO_ROOT / "reports" / report_stem
+        archive_stats = archive_to_report(
+            matched[:deep_k], cache_dir=pdf_cache_dir, archive_dir=archive_dir)
+        print(f"[deep] PDF archive → {archive_dir} "
+              f"(hardlinked={archive_stats['linked']} "
+              f"copied={archive_stats['copied']} "
+              f"missing={archive_stats['missing']})")
 
     # Gemini: seed the cached_content once before bot calls.
     if gemini_ctx:
@@ -480,19 +509,17 @@ def main(topic: str, *, window_days: int = 100, k_clusters: int = 3,
             "usd_estimate": f"${totals['usd']:.4f}",
             **({"deep": True, "deep_k": deep_k,
                 "deep_pdfs_ok": deep_stats.get("ok", 0),
-                "deep_pdfs_failed": deep_stats.get("failed", 0)}
+                "deep_pdfs_failed": deep_stats.get("failed", 0),
+                "pdf_archive": f"reports/{report_stem}/",
+                "pdf_archive_linked": archive_stats.get("linked", 0),
+                "pdf_archive_copied": archive_stats.get("copied", 0),
+                "pdf_archive_missing": archive_stats.get("missing", 0)}
                if deep else {}),
         },
         window=(today - timedelta(days=window_days), today),
     )
-    slug = topic.lower().replace(" ", "-")
-    suffix_parts = []
-    if model != "sonnet":
-        suffix_parts.append(model)
-    if deep:
-        suffix_parts.append("deep")
-    suffix = ("-" + "-".join(suffix_parts)) if suffix_parts else ""
-    report_path = REPO_ROOT / "reports" / f"{today.isoformat()}-{slug}{suffix}.md"
+    # report_stem already built above (used for PDF archive folder).
+    report_path = REPO_ROOT / "reports" / f"{report_stem}.md"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(md, encoding="utf-8")
     print(f"[done] report → {report_path}")

@@ -83,7 +83,7 @@ Claude Code 내에서:
 | `--max-papers M` | 100 | 4봇에 전달되는 hard cap. venue weight desc + date desc로 정렬 후 컷 (top-tier 학회가 arXiv-only보다 우선) |
 | `--match-mode` | `substring` | `substring` 또는 `embedding` (heavyweight, 옵트인) |
 | `--model` | `gemini-flash` | v0.4 default. `sonnet` / `gemini-pro` / `gemini-flash`. Gemini는 `google-genai` SDK + `GOOGLE_API_KEY` 필요. Flash ~$0.01 / Pro ~$0.06 / Sonnet ~$0.20. |
-| `--deep` | off | v0.4 I-1: 상위 `--deep-k` 매칭 논문의 PDF 본문에서 intro/method/limitations를 추출해 Skeptic·Proposer에만 추가 컨텍스트로 주입. Trend/Gap은 메타만. PDF 캐시는 `metadb/.pdfs/` (gitignored). |
+| `--deep` | off | v0.4 I-1: 상위 `--deep-k` 매칭 논문의 PDF 본문에서 intro/method/limitations를 추출해 Skeptic·Proposer에만 추가 컨텍스트로 주입. Trend/Gap은 메타만. 원본 PDF는 `metadb/.pdfs/`에 캐시되고, `reports/<stem>/`에 하드링크 + `manifest.json` 함께 저장 (둘 다 gitignored, 디스크 0 추가). |
 | `--deep-k` | 10 | `--deep`이 켜졌을 때 PDF를 받는 논문 수 |
 | `--expand-only` | off | 키워드 확장만 |
 | `--dry-run` | off | §3 scope 요약만 보고 4봇 실행 없이 중단 (§3는 항상 표시 후 사용자 승인 필요; --dry-run은 그 이후를 건너뜀) |
