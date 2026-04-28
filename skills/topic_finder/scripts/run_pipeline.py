@@ -242,10 +242,10 @@ def estimate_cost(usage_log: list) -> dict:
 
 # ------------------------------- Pipeline ----------------------------------
 
-def main(topic: str, *, window_days: int = 60, k_clusters: int = 5,
-         p_proposals: int = 5, max_papers: int = 200,
+def main(topic: str, *, window_days: int = 100, k_clusters: int = 5,
+         p_proposals: int = 5, max_papers: int = 100,
          keywords_file: Path | None = None,
-         model: str = "gemini-pro") -> Path:
+         model: str = "gemini-flash") -> Path:
     _load_dotenv()
     pruned = prune_cache_dirs()
     if pruned:
@@ -472,14 +472,16 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("topic")
-    ap.add_argument("--window-days", type=int, default=60)
+    ap.add_argument("--window-days", type=int, default=100)
     ap.add_argument("--clusters", type=int, default=5)
     ap.add_argument("--proposals", type=int, default=5)
-    ap.add_argument("--max-papers", type=int, default=200)
-    ap.add_argument("--model", default="gemini-pro",
+    ap.add_argument("--max-papers", type=int, default=100)
+    ap.add_argument("--model", default="gemini-flash",
                     choices=["sonnet", "gemini-pro", "gemini-flash"],
-                    help="LLM for the 4-bot pipeline. Default flipped from "
-                         "sonnet → gemini-pro in v0.4 (post 5-run regression).")
+                    help="LLM for the 4-bot pipeline. v0.4 default is "
+                         "gemini-flash (~$0.01/run); use gemini-pro for "
+                         "sharper gap analysis (~$0.06) or sonnet for "
+                         "highest fidelity (~$0.20).")
     ap.add_argument("--keywords-file", type=Path, default=None)
     args = ap.parse_args()
     t0 = time.time()

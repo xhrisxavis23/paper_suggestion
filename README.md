@@ -77,15 +77,14 @@ Claude Code 내에서:
 
 | Arg | Default | 설명 |
 |---|---|---|
-| `--top N` | 10 | 클러스터당 대표 논문 |
 | `--clusters K` | 5 | 클러스터 개수 |
 | `--proposals P` | 5 | 제안 개수 |
-| `--window D` | 60 | rolling window 일수 (≤ DB window) |
-| `--max-papers M` | 200 | 4봇에 전달되는 hard cap. venue weight desc + date desc로 정렬 후 컷 (top-tier 학회가 arXiv-only보다 우선) |
+| `--window D` | 100 | rolling window 일수 (≤ DB window) |
+| `--max-papers M` | 100 | 4봇에 전달되는 hard cap. venue weight desc + date desc로 정렬 후 컷 (top-tier 학회가 arXiv-only보다 우선) |
 | `--match-mode` | `substring` | `substring` 또는 `embedding` (heavyweight, 옵트인) |
-| `--model` | `gemini-pro` | v0.4 default. `sonnet` / `gemini-pro` / `gemini-flash`. Gemini는 `google-genai` SDK + `GOOGLE_API_KEY` 필요. `cached_content`로 Sonnet과 동일한 50% 캐시 절감. 회귀 5/5 통과 후 default 전환 (Sonnet ~$0.20 → Pro ~$0.06 → Flash ~$0.01). |
+| `--model` | `gemini-flash` | v0.4 default. `sonnet` / `gemini-pro` / `gemini-flash`. Gemini는 `google-genai` SDK + `GOOGLE_API_KEY` 필요. Flash ~$0.01 / Pro ~$0.06 / Sonnet ~$0.20. |
 | `--expand-only` | off | 키워드 확장만 |
-| `--dry-run` | off | 매칭/토큰 추정만 |
+| `--dry-run` | off | §3 scope 요약만 보고 4봇 실행 없이 중단 (§3는 항상 표시 후 사용자 승인 필요; --dry-run은 그 이후를 건너뜀) |
 
 ### 토큰 예산 — 왜 cap이 필요한가
 

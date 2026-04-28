@@ -28,13 +28,12 @@ Parsed from `/find-topic "<keyword>" [options...]`:
 | Arg | Default | Notes |
 |-----|---------|-------|
 | `<keyword>` | (required) | User's topic, free-form quoted string |
-| `--top N` | 10 | Representative papers per cluster |
 | `--clusters K` | 5 | Number of clusters Trend-Analyzer should output |
 | `--proposals P` | 5 | Number of proposals Proposer should output |
-| `--window D` | 60 | Rolling window days (must be ≤ DB window). Mapped to `--window-days D` on the match script. |
-| `--max-papers M` | 200 | Hard cap on papers passed into the 4-bot pipeline (ranked by `(venue_weight DESC, date DESC)` — top-tier venues outrank arXiv-only). Bounds Sonnet 200K context. |
+| `--window D` | 100 | Rolling window days (must be ≤ DB window). Mapped to `--window-days D` on the match script. |
+| `--max-papers M` | 100 | Hard cap on papers passed into the 4-bot pipeline (ranked by `(venue_weight DESC, date DESC)` — top-tier venues outrank arXiv-only). 100 is the v0.4 default; the pipeline can scale up to ~200 within Sonnet's 200K context if you bump it. |
 | `--match-mode` | `substring` | `substring` (default) or `embedding` (sentence-transformers + FAISS, opt-in heavyweight) |
-| `--model` | `gemini-pro` | `sonnet` / `gemini-pro` / `gemini-flash`. Selects the LLM for the 4-bot pipeline. v0.4: default flipped to `gemini-pro` after 5-run regression — typical run is ~$0.06 (Sonnet was ~$0.20 with caching). Use `gemini-flash` for max cost reduction (~$0.01) or `sonnet` for the highest-fidelity output. |
+| `--model` | `gemini-flash` | `sonnet` / `gemini-pro` / `gemini-flash`. Selects the LLM for the 4-bot pipeline. v0.4 default is `gemini-flash` (~$0.01/run, ~₩15). Step up to `gemini-pro` (~$0.06) for sharper gap analysis or `sonnet` (~$0.20) for the highest fidelity. |
 | `--expand-only` | off | Stop after keyword expansion + match (debug) |
 | `--dry-run` | off | Show match count + token estimate then stop |
 | `--output <path>` | `reports/YYYY-MM-DD-<slug>.md` | Output path |
@@ -77,7 +76,7 @@ Show the user:
 **매칭 논문:** <N>건 (rolling <D>d)  ← if N > <M>, "(capped from <N> to <M>)"
 **클러스터 K = <K>, 제안 P = <P>, 모델 = <model>**
 **예상 토큰:** ~150K input, ~25K output
-**예상 비용:** Sonnet ≈ ~600원 / Gemini Pro ≈ ~250원 / Gemini Flash ≈ ~50원 (캐싱 가정)
+**예상 비용:** Gemini Flash ≈ ~₩15 (default) / Pro ≈ ~₩90 / Sonnet ≈ ~₩300 (캐싱 가정)
 
 Approve / 수정 / abort
 ```
