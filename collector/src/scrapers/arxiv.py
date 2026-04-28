@@ -29,6 +29,11 @@ NS = {
     "arxiv": "http://arxiv.org/schemas/atom",
 }
 ARXIV_DELAY = 3.0  # API recommends 3-second pacing
+# Backoff delays between retries on 429 / 5xx / timeout. Length = max retries.
+# Tuned for arXiv — short bursts of 429 typically clear within ~30-60s, longer
+# IP throttles can persist a few minutes after heavy backfill.
+ARXIV_RETRY_DELAYS = (5, 15, 45, 90)
+ARXIV_RETRY_STATUSES = {429, 500, 502, 503, 504}
 
 
 def _date_window(target: date, lookback: int) -> Tuple[date, date]:
@@ -120,7 +125,27 @@ class ArxivScraper:
             "sortBy": "submittedDate",
             "sortOrder": "descending",
         }
-        r = self.session.get(ARXIV_API, params=params, timeout=30)
-        r.raise_for_status()
-        root = ET.fromstring(r.content)
-        return [_result_to_paper(e, category) for e in root.findall("atom:entry", NS)]
+        # Retry on transient errors (429 / 5xx / timeout). Final failure
+        # propagates to the per-category try/except in fetch().
+        last_exc: Exception | None = None
+        for attempt in range(len(ARXIV_RETRY_DELAYS) + 1):
+            if attempt > 0:
+                wait = ARXIV_RETRY_DELAYS[attempt - 1]
+                logger.info("arXiv %s retry %d/%d after %ds (%s)",
+                            category, attempt, len(ARXIV_RETRY_DELAYS), wait,
+                            type(last_exc).__name__ if last_exc else "?")
+                time.sleep(wait)
+            try:
+                r = self.session.get(ARXIV_API, params=params, timeout=30)
+            except requests.exceptions.Timeout as e:
+                last_exc = e
+                continue
+            if r.status_code in ARXIV_RETRY_STATUSES:
+                last_exc = requests.HTTPError(f"{r.status_code} for {r.url}")
+                continue
+            r.raise_for_status()
+            root = ET.fromstring(r.content)
+            return [_result_to_paper(e, category) for e in root.findall("atom:entry", NS)]
+        # Exhausted retries — surface the last transient error.
+        assert last_exc is not None
+        raise last_exc

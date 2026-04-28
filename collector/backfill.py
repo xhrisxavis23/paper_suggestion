@@ -63,16 +63,13 @@ def _resolve_range(args: argparse.Namespace) -> tuple[date, date]:
     return start, end
 
 
-def _build_plan(args: argparse.Namespace):
+def _build_per_day_plan(args: argparse.Namespace):
+    """Sources whose fetch() actually depends on target_date — run per day."""
     plan = []
     if not args.skip_arxiv:
         plan.append(("arxiv", ArxivScraper()))
     if not args.skip_hf:
         plan.append(("hf", HuggingFaceScraper()))
-    if args.with_or:
-        plan.append(("openreview", OpenReviewScraper()))
-    if args.with_s2:
-        plan.append(("s2", SemanticScholarScraper()))
     return plan
 
 
@@ -88,11 +85,30 @@ def main() -> int:
 
     total_added = 0
     total_failures: list[str] = []
+
+    # OR / S2 ignore target_date (OR returns the full venue snapshot; S2 uses
+    # its own rolling window). Fetch each once before the per-day loop instead
+    # of re-fetching identical data 482× — same dedup result, ~hours saved.
+    one_shots: list[tuple[str, object]] = []
+    if args.with_or:
+        one_shots.append(("openreview", OpenReviewScraper()))
+    if args.with_s2:
+        one_shots.append(("s2", SemanticScholarScraper()))
+    for name, scraper in one_shots:
+        ps, src_failures, fatal = _run_source(name, scraper, end)
+        new_papers = db.append(ps)
+        total_added += len(new_papers)
+        total_failures.extend(src_failures)
+        if fatal:
+            total_failures.append(fatal)
+        logger.info("%s (one-shot): fetched=%d added=%d",
+                    name, len(ps), len(new_papers))
+
     cur = start
     idx = 0
     while cur <= end:
         idx += 1
-        plan = _build_plan(args)  # fresh scrapers per day so .failures resets cleanly
+        plan = _build_per_day_plan(args)  # fresh scrapers per day so .failures resets cleanly
         all_papers = []
         for name, scraper in plan:
             ps, src_failures, fatal = _run_source(name, scraper, cur)

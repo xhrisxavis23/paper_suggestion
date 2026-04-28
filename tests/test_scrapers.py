@@ -76,6 +76,55 @@ def test_hf_fallback_returns_first_nonempty_day():
 # ---- I-4 / M-3: failure surfacing ----
 
 
+def test_arxiv_retries_on_429_then_succeeds(monkeypatch):
+    """_fetch_category retries 429 and returns papers on the next 200."""
+    import requests
+    from collector.src.scrapers import arxiv as arxiv_mod
+    monkeypatch.setattr(arxiv_mod.time, "sleep", lambda *a, **kw: None)
+
+    class FakeResp:
+        def __init__(self, status, body=b''):
+            self.status_code = status
+            self.content = body
+            self.url = "http://example/"
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                raise requests.HTTPError(f"{self.status_code}")
+    EMPTY_FEED = b'<feed xmlns="http://www.w3.org/2005/Atom"></feed>'
+    calls = {"n": 0}
+    def fake_get(*a, **kw):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            return FakeResp(429)
+        return FakeResp(200, EMPTY_FEED)
+
+    s = ArxivScraper()
+    monkeypatch.setattr(s.session, "get", fake_get)
+    papers = s._fetch_category("cs.AI", date(2026, 4, 27), date(2026, 4, 27))
+    assert papers == []
+    assert calls["n"] == 3                      # two 429s + one 200
+
+
+def test_arxiv_exhausts_retries_then_raises(monkeypatch):
+    """All retries fail — final transient error propagates so fetch() can log it."""
+    import requests
+    from collector.src.scrapers import arxiv as arxiv_mod
+    monkeypatch.setattr(arxiv_mod.time, "sleep", lambda *a, **kw: None)
+
+    class FakeResp:
+        status_code = 429
+        url = "http://example/"
+        content = b''
+        def raise_for_status(self):
+            raise requests.HTTPError("429")
+
+    s = ArxivScraper()
+    monkeypatch.setattr(s.session, "get", lambda *a, **kw: FakeResp())
+    import pytest as _pytest
+    with _pytest.raises(requests.HTTPError):
+        s._fetch_category("cs.AI", date(2026, 4, 27), date(2026, 4, 27))
+
+
 def test_scraper_records_failures_on_per_unit_exception(monkeypatch):
     """When a per-category fetch raises, ArxivScraper records it in self.failures
     rather than crashing the whole run."""

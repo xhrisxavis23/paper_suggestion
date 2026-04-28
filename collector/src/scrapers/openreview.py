@@ -35,17 +35,34 @@ class OpenReviewScraper:
         return out
 
     def _fetch_venue(self, venue_id: str) -> List[Paper]:
-        params = {
-            "content.venueid": venue_id,
-            "limit": 1000,
-            "details": "replyCount",
-        }
-        r = self.session.get(OR_API, params=params, timeout=30)
-        r.raise_for_status()
-        notes = r.json().get("notes", [])
+        # Paginate — dblp-imported venues (AAAI/CVPR/ACL/EMNLP/ECCV/...) routinely
+        # exceed 1000 papers per year, and the API caps each page at 1000.
+        notes: list = []
+        offset = 0
+        PAGE = 1000
+        while True:
+            params = {
+                "content.venueid": venue_id,
+                "limit": PAGE,
+                "offset": offset,
+                "details": "replyCount",
+            }
+            r = self.session.get(OR_API, params=params, timeout=30)
+            r.raise_for_status()
+            batch = r.json().get("notes", [])
+            notes.extend(batch)
+            if len(batch) < PAGE:
+                break
+            offset += PAGE
 
         out: List[Paper] = []
-        venue_short = venue_id.split("/")[0].split(".")[0]
+        # dblp.org/conf/<UPPER>/<year> → use the acronym at parts[2]; otherwise
+        # fall back to the existing `<NAME>.cc` heuristic (works for ICLR/NeurIPS).
+        parts = venue_id.split("/")
+        if parts[0] == "dblp.org" and len(parts) >= 3:
+            venue_short = parts[2]
+        else:
+            venue_short = parts[0].split(".")[0]
         for n in notes:
             content = n.get("content", {})
             title = (content.get("title", {}) or {}).get("value", "").strip()
