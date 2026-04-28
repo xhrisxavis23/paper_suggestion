@@ -83,7 +83,7 @@ Claude Code 내에서:
 | `--window D` | 60 | rolling window 일수 (≤ DB window) |
 | `--max-papers M` | 200 | 4봇에 전달되는 hard cap. venue weight desc + date desc로 정렬 후 컷 (top-tier 학회가 arXiv-only보다 우선) |
 | `--match-mode` | `substring` | `substring` 또는 `embedding` (heavyweight, 옵트인) |
-| `--model` | `sonnet` | v0.4: `sonnet` / `gemini-pro` / `gemini-flash`. Gemini는 `google-genai` SDK + `GOOGLE_API_KEY` 필요. `cached_content`로 Sonnet과 동일한 50% 캐시 절감. |
+| `--model` | `gemini-pro` | v0.4 default. `sonnet` / `gemini-pro` / `gemini-flash`. Gemini는 `google-genai` SDK + `GOOGLE_API_KEY` 필요. `cached_content`로 Sonnet과 동일한 50% 캐시 절감. 회귀 5/5 통과 후 default 전환 (Sonnet ~$0.20 → Pro ~$0.06 → Flash ~$0.01). |
 | `--expand-only` | off | 키워드 확장만 |
 | `--dry-run` | off | 매칭/토큰 추정만 |
 

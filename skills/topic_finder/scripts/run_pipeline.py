@@ -169,7 +169,7 @@ def call_gemini_sdk(ctx: GeminiCtx, *, system: str, user_block: str,
         config=ctx.types.GenerateContentConfig(
             cached_content=ctx.cache_name,
             response_mime_type="application/json",
-            max_output_tokens=8192,
+            max_output_tokens=16384,
         ),
     )
     um = getattr(resp, "usage_metadata", None)
@@ -245,7 +245,7 @@ def estimate_cost(usage_log: list) -> dict:
 def main(topic: str, *, window_days: int = 60, k_clusters: int = 5,
          p_proposals: int = 5, max_papers: int = 200,
          keywords_file: Path | None = None,
-         model: str = "sonnet") -> Path:
+         model: str = "gemini-pro") -> Path:
     _load_dotenv()
     pruned = prune_cache_dirs()
     if pruned:
@@ -476,8 +476,10 @@ if __name__ == "__main__":
     ap.add_argument("--clusters", type=int, default=5)
     ap.add_argument("--proposals", type=int, default=5)
     ap.add_argument("--max-papers", type=int, default=200)
-    ap.add_argument("--model", default="sonnet",
-                    choices=["sonnet", "gemini-pro", "gemini-flash"])
+    ap.add_argument("--model", default="gemini-pro",
+                    choices=["sonnet", "gemini-pro", "gemini-flash"],
+                    help="LLM for the 4-bot pipeline. Default flipped from "
+                         "sonnet → gemini-pro in v0.4 (post 5-run regression).")
     ap.add_argument("--keywords-file", type=Path, default=None)
     args = ap.parse_args()
     t0 = time.time()

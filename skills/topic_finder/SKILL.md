@@ -34,7 +34,7 @@ Parsed from `/find-topic "<keyword>" [options...]`:
 | `--window D` | 60 | Rolling window days (must be ≤ DB window). Mapped to `--window-days D` on the match script. |
 | `--max-papers M` | 200 | Hard cap on papers passed into the 4-bot pipeline (ranked by `(venue_weight DESC, date DESC)` — top-tier venues outrank arXiv-only). Bounds Sonnet 200K context. |
 | `--match-mode` | `substring` | `substring` (default) or `embedding` (sentence-transformers + FAISS, opt-in heavyweight) |
-| `--model` | `sonnet` | `sonnet` / `gemini-pro` / `gemini-flash`. Selects the LLM for the 4-bot pipeline. v0.4: default still `sonnet` until 5-run regression on Gemini passes. |
+| `--model` | `gemini-pro` | `sonnet` / `gemini-pro` / `gemini-flash`. Selects the LLM for the 4-bot pipeline. v0.4: default flipped to `gemini-pro` after 5-run regression — typical run is ~$0.06 (Sonnet was ~$0.20 with caching). Use `gemini-flash` for max cost reduction (~$0.01) or `sonnet` for the highest-fidelity output. |
 | `--expand-only` | off | Stop after keyword expansion + match (debug) |
 | `--dry-run` | off | Show match count + token estimate then stop |
 | `--output <path>` | `reports/YYYY-MM-DD-<slug>.md` | Output path |
