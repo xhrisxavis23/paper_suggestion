@@ -27,6 +27,11 @@ _VENUE_WEIGHT = {
     "ICCV": 4,
     "KDD": 4,
     "AAAI": 3,
+    # Journals from JOURNAL_TARGETS (--with-journal). Peer-reviewed and slower
+    # to publish than arXiv preprints — weight=3 keeps them ahead of arXiv(2)
+    # but below top-tier conferences. Tune if more journals are added.
+    "IEEE Trans. Industrial Informatics": 3,
+    "Expert Systems with Applications": 3,
     "HF": 2,
     "arXiv": 2,
 }

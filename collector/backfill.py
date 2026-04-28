@@ -24,6 +24,7 @@ from .src.db import RollingDB
 from .main import _run_source, parse_args as _main_parse_args  # noqa: F401
 from .src.scrapers.arxiv import ArxivScraper
 from .src.scrapers.huggingface import HuggingFaceScraper
+from .src.scrapers.journal import JournalScraper
 from .src.scrapers.openreview import OpenReviewScraper
 from .src.scrapers.semantic_scholar import SemanticScholarScraper
 
@@ -46,6 +47,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--skip-hf", action="store_true")
     p.add_argument("--with-or", action="store_true")
     p.add_argument("--with-s2", action="store_true")
+    p.add_argument("--with-journal", action="store_true")
     p.add_argument("--root", default=".")
     return p.parse_args()
 
@@ -94,6 +96,8 @@ def main() -> int:
         one_shots.append(("openreview", OpenReviewScraper()))
     if args.with_s2:
         one_shots.append(("s2", SemanticScholarScraper()))
+    if args.with_journal:
+        one_shots.append(("journal", JournalScraper()))
     for name, scraper in one_shots:
         ps, src_failures, fatal = _run_source(name, scraper, end)
         new_papers = db.append(ps)

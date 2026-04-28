@@ -176,14 +176,29 @@ def call_gemini_sdk(ctx: GeminiCtx, *, system: str, user_block: str,
         ),
     )
     um = getattr(resp, "usage_metadata", None)
+    out_tokens = getattr(um, "candidates_token_count", 0) if um else 0
+    # Surface truncation cause: MAX_TOKENS vs SAFETY vs STOP.
+    finish_reason = None
+    cands = getattr(resp, "candidates", None) or []
+    if cands:
+        fr = getattr(cands[0], "finish_reason", None)
+        finish_reason = getattr(fr, "name", None) or str(fr) if fr else None
+    text = (resp.text or "").strip()
+    if finish_reason and finish_reason not in ("STOP", "FinishReason.STOP", "1"):
+        print(f"  [{label}/{ctx.model}] WARN finish_reason={finish_reason} "
+              f"out_tokens={out_tokens} text_len={len(text)}", flush=True)
+    else:
+        print(f"  [{label}/{ctx.model}] finish_reason={finish_reason} "
+              f"out_tokens={out_tokens}", flush=True)
     if um:
         usage_log.append({
             "label": label, "model": ctx.model,
             "in": getattr(um, "prompt_token_count", 0),
             "in_cached_read": getattr(um, "cached_content_token_count", 0),
-            "out": getattr(um, "candidates_token_count", 0),
+            "out": out_tokens,
+            "finish_reason": finish_reason,
         })
-    return (resp.text or "").strip()
+    return text
 
 
 # ----------------------------- Common helpers ------------------------------

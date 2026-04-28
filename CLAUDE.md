@@ -4,7 +4,7 @@
 
 ## Layers
 
-- **Layer 1: collector** (`collector/`) — Python CLI + cron. Daily scrape of arXiv / HuggingFace daily papers (default) plus OpenReview / Semantic Scholar (opt-in via `--with-or` / `--with-s2`), deduped into a monthly-partitioned JSONL DB at `metadb/`. No topic filtering at collect time — DB is "everything", filtering happens in Layer 2.
+- **Layer 1: collector** (`collector/`) — Python CLI + cron. Daily scrape of arXiv / HuggingFace daily papers (default) plus OpenReview / Semantic Scholar / OpenAlex journals (opt-in via `--with-or` / `--with-s2` / `--with-journal`), deduped into a monthly-partitioned JSONL DB at `metadb/`. No topic filtering at collect time — DB is "everything", filtering happens in Layer 2.
 - **Layer 2: topic-finder skill** (`skills/topic_finder/`) — Claude Code skill (`/find-topic`). Expand keywords → match against rolling DB (substring or embedding) → cap+rank papers (default 200) → run 4 Sonnet calls with prompt-cached context (Trend-Analyzer, Gap-Hunter, Skeptic, Proposer) → emit Markdown report under `reports/`.
 
 ## Repo layout
@@ -14,7 +14,7 @@ collector/
   main.py                     # entry point: python -m collector.main
   backfill.py                 # python -m collector.backfill --start ... --end ...
   src/db.py                   # RollingDB (monthly-partitioned JSONL store + flock)
-  src/scrapers/               # arxiv, huggingface, openreview, semantic_scholar
+  src/scrapers/               # arxiv, huggingface, openreview, semantic_scholar, journal (OpenAlex)
   src/{config,formatter,models}.py
 skills/topic_finder/
   SKILL.md                    # /find-topic spec — read this for pipeline details
@@ -44,12 +44,13 @@ tests/                        # pytest unit tests
 python -m venv .venv && source .venv/bin/activate
 pip install -r collector/requirements.txt pytest
 
-# Layer 1: collect (arxiv + hf default; --with-s2 / --with-or to opt in)
+# Layer 1: collect (arxiv + hf default; --with-s2 / --with-or / --with-journal to opt in)
 python -m collector.main                          # today, defaults
 python -m collector.main --date 2026-04-26
 python -m collector.main --with-s2                # include Semantic Scholar
 python -m collector.main --with-or                # 12 venues pre-configured
-python -m collector.backfill --start 2025-01-01 --end "$(date +%F)" --with-or
+python -m collector.main --with-journal           # OpenAlex: IEEE TII + ESWA
+python -m collector.backfill --start 2025-01-01 --end "$(date +%F)" --with-or --with-journal
 
 # Tests
 pytest                                            # 40 unit tests, integration deselected
@@ -80,13 +81,14 @@ pytest -m integration                             # live network tests
 - **arXiv 429 / timeout retry**: `_fetch_category` retries on `{429, 500, 502, 503, 504}` and `requests.Timeout` with exponential backoff (`ARXIV_RETRY_DELAYS = (5, 15, 45, 90)` seconds, 4 retries max). Final exhaustion propagates to `fetch()` and is recorded as a partial failure. Tuned for arXiv's IP throttle which can persist a few minutes after heavy backfill.
 - **Semantic Scholar opt-in**: off by default in v0.3 because the public search-API rate-limits every venue to 0 without an API key. Use `--with-s2` and set `SEMANTIC_SCHOLAR_API_KEY` (in CI: `secrets.SEMANTIC_SCHOLAR_API_KEY`).
 - **OpenReview opt-in**: off by default. Twelve venues now pre-configured in `OPENREVIEW_VENUE_IDS`: ICLR/ICML/NeurIPS use OR-native (`*.cc/<year>/Conference`) for in-progress submissions; AAAI / ACL / NAACL / EMNLP / IJCNLP (=AACL) / IJCAI / CVPR / ICCV / KDD use **dblp.org/conf/<UPPER>/<year>** because OR's `content.venueid` filter returns 0 for those venues' native ids — dblp imports backfill metadata after each conference finalizes. dblp imports use synthetic `cdate = Jan 1` of the conference year. Add new venues by appending to the list; the scraper already handles both forms (see `openreview.py:_fetch_venue` → `venue_short` extraction).
+- **Journal opt-in (`--with-journal`, v0.4 I-2)**: pulls from OpenAlex via `JOURNAL_TARGETS` (ISSN list) in `config.py`. Currently configured: IEEE Trans. Industrial Informatics (1551-3203) + Expert Systems with Applications (0957-4174). Each target paginates up to `JOURNAL_PER_VENUE_LIMIT` (200) papers within the rolling window. No API key required; setting `OPENALEX_MAILTO` env opts into OpenAlex's polite pool (lifts rate limits). Empty-abstract papers (TOCs / errata) are dropped at scraper level since the 4-bot pipeline matches on abstracts. Source = `openalex`, venue = the human-readable name from the config. Backfill wires this as one-shot like OR/S2 — `target_date` is upper bound only.
 - **HuggingFace fallback loop**: if today's daily-papers list is empty, scraper walks back up to `HF_FALLBACK_DAYS` (default 3) and stops at the first non-empty day.
 - **Concurrency**: `collector/main.py` runs all enabled scrapers in a `ThreadPoolExecutor` (one worker per source). Each scraper owns its own session, no shared state.
 - **Backfill: OR/S2 are one-shot**: `collector/backfill.py` runs OR and S2 once before the per-day loop (their `fetch()` ignores `target_date` — OR returns the full venue snapshot, S2 uses its own rolling window). arXiv and HF still run per-day inside the loop. Pre-refactor (v0.3 ship) re-fetched OR every iteration — for a 482-day backfill that was ~5 hours wasted on duplicate API calls (DB dedup masked the bug).
 
 ## Skill / pipeline gotchas
 
-- **Token budget (I-1)**: `match_substring(..., max_papers=N)` sorts by `(venue_weight DESC, published_date DESC)` and slices to N. Top-tier venue papers (NeurIPS/ICML/ICLR/CVPR=5; ACL/EMNLP/NAACL/ECCV/ICCV/KDD=4; AAAI=3; HF/arXiv=2; default=1) survive the cap regardless of recency, then arXiv-tier ties break by date. Default cap is 200, which fits within Sonnet 200K context. Without the cap, popular topics ("rag", "agent") return 3K-6K matches → ~1M-2M token prompts that OOM. Always pass `--max-papers` from `/find-topic`.
+- **Token budget (I-1)**: `match_substring(..., max_papers=N)` sorts by `(venue_weight DESC, published_date DESC)` and slices to N. Top-tier venue papers (NeurIPS/ICML/ICLR/CVPR=5; ACL/EMNLP/NAACL/ECCV/ICCV/KDD=4; AAAI / IEEE TII / ESWA=3; HF/arXiv=2; default=1) survive the cap regardless of recency, then arXiv-tier ties break by date. Default cap is 200, which fits within Sonnet 200K context. Without the cap, popular topics ("rag", "agent") return 3K-6K matches → ~1M-2M token prompts that OOM. Always pass `--max-papers` from `/find-topic`.
 - **Prompt caching (I-3)**: the matched-papers JSON block is identical across all 4 bots. SDK calls mark it as `cache_control={"type": "ephemeral"}` (Anthropic) or seed a `cached_content` once and pass `cached_content=cache.name` (Gemini, v0.4) so it's cached after Trend-Analyzer's call → ~50% input-token savings on the 3 subsequent calls. Falls back to plain CLI calls if `ANTHROPIC_API_KEY` / `anthropic` SDK is missing.
 - **Backend selection (v0.4 I-3)**: `/find-topic --model {sonnet|gemini-pro|gemini-flash}`. **Default is `gemini-flash`** (~$0.01/run); step up to `gemini-pro` (~$0.06) for sharper gap analysis or `sonnet` (~$0.20) for highest fidelity. Sonnet uses anthropic SDK with `cache_control`; Gemini uses `google-genai` with explicit `cached_content` (TTL 1h, deleted in `finally:`). Prices live in `skills/topic_finder/scripts/run_pipeline.py:_PRICES` and the driver writes per-bot token totals + USD estimate to `reports/.cache/<run-id>/usage.json`.
 - **Default scope (v0.4)**: `--window-days 100`, `--max-papers 100`, `--clusters 3`, `--proposals 3`. The 100/100 pair was tuned on observed match densities (most topics produce 50–150 matches in 100 days; top-tier venue ranking ensures conference papers survive the cap before arXiv-only siblings). K=3, P=3 keeps trend output focused and stops Proposer from forcing duplicates when Skeptic only passes 2–3 gaps.

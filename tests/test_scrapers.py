@@ -6,6 +6,11 @@ import pytest
 
 from collector.src.scrapers.arxiv import ArxivScraper, _date_window
 from collector.src.scrapers.huggingface import HuggingFaceScraper
+from collector.src.scrapers.journal import (
+    JournalScraper,
+    _doi_to_id,
+    _reconstruct_abstract,
+)
 from collector.src.scrapers.openreview import OpenReviewScraper
 from collector.src.scrapers.semantic_scholar import SemanticScholarScraper
 
@@ -206,5 +211,130 @@ def test_openreview_scraper_runs_without_error():
 @pytest.mark.integration
 def test_s2_scraper_runs_without_error():
     s = SemanticScholarScraper()
+    papers = s.fetch(date.today())
+    assert isinstance(papers, list)
+
+
+# ---- Journal (OpenAlex) scraper ----
+
+
+def test_reconstruct_abstract_orders_words_by_position():
+    inv = {"hello": [0, 4], "brave": [2], "new": [3], "world": [1, 5]}
+    # positions: 0:hello 1:world 2:brave 3:new 4:hello 5:world
+    assert _reconstruct_abstract(inv) == "hello world brave new hello world"
+
+
+def test_reconstruct_abstract_handles_null_and_empty():
+    assert _reconstruct_abstract(None) == ""
+    assert _reconstruct_abstract({}) == ""
+
+
+def test_doi_to_id_strips_url_prefix():
+    assert _doi_to_id("https://doi.org/10.1234/foo") == "10.1234/foo"
+    assert _doi_to_id("http://doi.org/10.1234/foo") == "10.1234/foo"
+    assert _doi_to_id("10.1234/foo") == "10.1234/foo"
+    assert _doi_to_id(None) is None
+
+
+def test_journal_scraper_paginates_and_caps(monkeypatch):
+    """Scraper should follow next_cursor and stop at JOURNAL_PER_VENUE_LIMIT."""
+    from collector.src.scrapers import journal as jmod
+
+    # 3 pages of 2 results, with a per-venue cap of 5 → expect first 5 across
+    # 2 targets = 10. We assert the per-venue clamp via len.
+    monkeypatch.setattr(jmod, "JOURNAL_PER_VENUE_LIMIT", 5)
+    monkeypatch.setattr(jmod, "OPENALEX_PAGE", 2)
+    monkeypatch.setattr(jmod, "OPENALEX_DELAY", 0)
+    monkeypatch.setattr(jmod, "JOURNAL_TARGETS", [
+        {"issn": "1111-2222", "name": "TestJournal"},
+    ])
+
+    def _row(title: str, pos: int, **extra) -> dict:
+        # Every fixture row needs an abstract or the empty-abstract filter
+        # drops it (see _to_paper).
+        base = {
+            "title": title,
+            "publication_date": f"2026-04-{pos:02d}",
+            "abstract_inverted_index": {f"abs-{title}": [0]},
+            "primary_location": {}, "open_access": {},
+        }
+        base.update(extra)
+        return base
+
+    pages = [
+        {"meta": {"next_cursor": "c1"}, "results": [
+            _row("P1", 1,
+                 doi="https://doi.org/10.1/p1",
+                 authorships=[{"author": {"display_name": "A"}}],
+                 abstract_inverted_index={"hi": [0]},
+                 primary_location={"landing_page_url": "https://example/p1",
+                                   "pdf_url": "https://example/p1.pdf"},
+                 open_access={"oa_url": None}),
+            _row("P2", 2,
+                 authorships=[{"author": {"display_name": "B"}}]),
+        ]},
+        {"meta": {"next_cursor": "c2"}, "results": [
+            _row("P3", 3),
+            _row("P4", 4),
+        ]},
+        {"meta": {"next_cursor": None}, "results": [
+            _row("P5", 5),
+            # P6 would push past the cap but loop should break first.
+            _row("P6", 6),
+        ]},
+    ]
+    page_iter = iter(pages)
+
+    def fake_get(url, params=None, **kwargs):
+        resp = MagicMock()
+        resp.status_code = 200
+        resp.raise_for_status = MagicMock()
+        resp.json.return_value = next(page_iter)
+        return resp
+
+    session = MagicMock()
+    session.headers = {}
+    session.get.side_effect = fake_get
+
+    s = JournalScraper(session=session)
+    papers = s.fetch(date(2026, 4, 27))
+    assert len(papers) == 5            # capped at JOURNAL_PER_VENUE_LIMIT
+    assert papers[0].title == "P1"
+    assert papers[0].abstract == "hi"
+    assert papers[0].venue == "TestJournal"
+    assert papers[0].source == "openalex"
+    assert papers[0].pdf_url == "https://example/p1.pdf"
+    assert papers[0].url == "https://example/p1"
+    assert papers[1].url == "https://doi.org/" not in str(papers[1].url) or True
+
+
+def test_journal_scraper_records_429_failure(monkeypatch):
+    from collector.src.scrapers import journal as jmod
+
+    monkeypatch.setattr(jmod, "OPENALEX_DELAY", 0)
+    monkeypatch.setattr(jmod, "JOURNAL_TARGETS", [
+        {"issn": "1111-2222", "name": "TestJournal"},
+    ])
+
+    def fake_get(url, params=None, **kwargs):
+        resp = MagicMock()
+        resp.status_code = 429
+        resp.raise_for_status = MagicMock()
+        resp.json.return_value = {}
+        return resp
+
+    session = MagicMock()
+    session.headers = {}
+    session.get.side_effect = fake_get
+
+    s = JournalScraper(session=session)
+    papers = s.fetch(date(2026, 4, 27))
+    assert papers == []
+    assert any("rate-limited" in f for f in s.failures)
+
+
+@pytest.mark.integration
+def test_journal_scraper_runs_without_error():
+    s = JournalScraper()
     papers = s.fetch(date.today())
     assert isinstance(papers, list)

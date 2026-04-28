@@ -44,8 +44,11 @@ python -m collector.main --with-s2
 # OpenReview 포함 (12개 venue 사전 등록 — AAAI/ACL/NAACL/EMNLP/IJCNLP/IJCAI/CVPR/ICCV/KDD/ICLR/ICML/NeurIPS)
 python -m collector.main --with-or
 
-# 백필 — OR/S2는 target_date 무시하므로 루프 시작 시 1번만 fetch (one-shot)
-python -m collector.backfill --start 2025-01-01 --end 2026-04-27 --with-or
+# 저널 포함 (OpenAlex, v0.4 — IEEE Trans. Industrial Informatics + Expert Systems with Applications)
+python -m collector.main --with-journal
+
+# 백필 — OR/S2/journal은 target_date 무시하므로 루프 시작 시 1번만 fetch (one-shot)
+python -m collector.backfill --start 2025-01-01 --end 2026-04-27 --with-or --with-journal
 python -m collector.backfill --days 30 --with-s2
 ```
 

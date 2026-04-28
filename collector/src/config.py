@@ -42,6 +42,20 @@ OPENREVIEW_VENUE_IDS = [
     "dblp.org/conf/KDD/2025",
 ]
 
+# Journal targets queried via OpenAlex (`--with-journal`).
+# Each entry: ISSN (any one of print/electronic) + a short display name used
+# as `Paper.venue`. OpenAlex's `primary_location.source.issn` filter accepts
+# the ISSN with or without a hyphen and matches on either ISSN form.
+# Add new journals by extending this list.
+JOURNAL_TARGETS = [
+    {"issn": "1551-3203", "name": "IEEE Trans. Industrial Informatics"},
+    {"issn": "0957-4174", "name": "Expert Systems with Applications"},
+]
+
+# Per-journal cap per fetch — guards against unexpected publication spikes
+# and bounds the JSONL growth from a one-shot pull.
+JOURNAL_PER_VENUE_LIMIT = 200
+
 # HuggingFace daily papers fallback window
 HF_FALLBACK_DAYS = 3
 

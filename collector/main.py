@@ -35,6 +35,7 @@ from .src.db import RollingDB
 from .src.formatter import format_daily_digest
 from .src.scrapers.arxiv import ArxivScraper
 from .src.scrapers.huggingface import HuggingFaceScraper
+from .src.scrapers.journal import JournalScraper
 from .src.scrapers.openreview import OpenReviewScraper
 from .src.scrapers.semantic_scholar import SemanticScholarScraper
 
@@ -59,6 +60,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--with-s2", action="store_true",
                    help="Include Semantic Scholar (off by default — requires "
                         "SEMANTIC_SCHOLAR_API_KEY to return data).")
+    p.add_argument("--with-journal", action="store_true",
+                   help="Include OpenAlex journal pulls per JOURNAL_TARGETS "
+                        "(off by default; one-shot per run, ignores --date).")
     p.add_argument("--root", default=".",
                    help="Repo root (paths under metadb/ are resolved here)")
     return p.parse_args()
@@ -98,6 +102,8 @@ def main() -> int:
         plan.append(("openreview", OpenReviewScraper()))
     if args.with_s2:
         plan.append(("s2", SemanticScholarScraper()))
+    if args.with_journal:
+        plan.append(("journal", JournalScraper()))
 
     all_papers: list = []
     counts: dict[str, int] = {}
