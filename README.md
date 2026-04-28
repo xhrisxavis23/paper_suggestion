@@ -2,12 +2,12 @@
 
 연구 주제 발굴 봇 — 사용자 키워드를 받아 최근 학계 논문 메타데이터를 분석해 **트렌드 → 갭 → 연구 제안** 보고서를 자동 생성합니다.
 
-현재 버전: **v0.3** ([backlog 17개 항목 모두 반영](docs/plans/v0.3-backlog.md), 토큰 예산 강제, prompt caching, 백필 CLI, opt-in S2/OR). v0.3 마무리 패치로 **rolling window 500일 + 12개 학회 venue + arxiv 재시도 로직** 반영. 다음 마일스톤은 [v0.4-backlog.md](docs/plans/v0.4-backlog.md).
+현재 버전: **v0.4** ([backlog Important 4개 모두 shipped](docs/plans/v0.4-backlog.md)). 핵심 변경: **`--deep` PDF 본문 분석 + 아카이브 번들**, **OpenAlex 저널 수집 (`--with-journal`)**, **Gemini 백엔드 (default `gemini-flash`)**, Flash truncation 가드. 매일 06:00 UTC cron이 arxiv/HF/OR/S2/journal 전체를 한 번에 모읍니다. 다음 마일스톤: v0.5 (Personalization, Trend SVG 등).
 
 ## 구조
 
-- **Layer 1: Collector** (Python CLI / cron) — 매일 arXiv·HF 메타데이터 수집 (S2/OR는 `--with-s2` / `--with-or` 옵트인). **500일 rolling DB** 유지 (2025-01-01 이후 데이터 보존), `metadb/<YYMM>_rolling.jsonl`로 월별 분할.
-- **Layer 2: topic-finder skill** (Claude Code) — 사용자 키워드 → 매칭 (substring 또는 embedding) → top-200 cap → 4봇 회의 (Trend → Gap → Skeptic → Proposer, prompt cached) → Markdown 보고서.
+- **Layer 1: Collector** (Python CLI / cron) — 매일 06:00 UTC GitHub Actions가 arXiv·HF·OpenReview(12 학회)·Semantic Scholar·OpenAlex(저널) **전체**를 수집. **500일 rolling DB** 유지 (2025-01-01 이후 데이터 보존), `metadb/<YYMM>_rolling.jsonl`로 `published_date.YYMM` 기준 월별 분할 — back-dated 저널/학회 import도 자동으로 올바른 파일에 라우팅됨.
+- **Layer 2: topic-finder skill** (Claude Code) — 사용자 키워드 → 매칭 (substring 또는 embedding) → top-100 cap → 4봇 회의 (Trend → Gap → Skeptic → Proposer, prompt cached, default Gemini Flash) → Markdown 보고서. `--deep`이면 상위 N편 PDF 본문(intro/method/limitations) 추출 후 Skeptic·Proposer에 추가 컨텍스트 주입.
 
 자세한 설계: [docs/specs/2026-04-26-paper-suggestion-design.md](docs/specs/2026-04-26-paper-suggestion-design.md)
 Claude 세션 오리엔테이션: [CLAUDE.md](CLAUDE.md)
@@ -59,8 +59,8 @@ python -m collector.backfill --days 30 --with-s2
 - `metadb/stats_history.jsonl` — append-only 이력 (CI가 90일 초과분 청소)
 
 자동 실행:
-- `.github/workflows/daily_collect.yml` — GitHub Actions 매일 06:00 UTC (pytest 게이트 통과 후 commit)
-- 로컬 cron 옵션: `0 6 * * * cd <repo> && .venv/bin/python -m collector.main --with-or >> cron_collect.log 2>&1` (시스템 TZ가 KST면 06:00 KST)
+- `.github/workflows/daily_collect.yml` — GitHub Actions 매일 06:00 UTC, **`--with-s2 --with-or --with-journal`** 모두 켜고 실행 (pytest 게이트 통과 후 commit). `OPENALEX_MAILTO` secret 설정 시 OpenAlex polite pool에 들어감 (rate-limit 완화).
+- 로컬 cron 옵션: `0 6 * * * cd <repo> && .venv/bin/python -m collector.main --with-s2 --with-or --with-journal >> cron_collect.log 2>&1` (시스템 TZ가 KST면 06:00 KST)
 
 ## Layer 2 사용 — 연구 주제 보고서 생성
 
@@ -135,6 +135,21 @@ python -m skills.topic_finder.scripts.match_embedding \
     --out matched.jsonl \
     --window-days 60 --top-k 200
 ```
+
+## v0.4 변경 요약
+
+**Important (4)**
+- **I-1 `--deep` 모드**: 상위 `--deep-k` 매칭 논문의 PDF 본문에서 intro/method/limitations 추출 → Skeptic·Proposer에 추가 컨텍스트 주입. 원본 PDF는 `metadb/.pdfs/` 캐시 + `reports/<stem>/`에 하드링크 (gitignored, 디스크 0 추가). pypdf + 제목 정규식.
+- **I-2 Journal coverage**: OpenAlex 기반 저널 scraper (`--with-journal`). 현재 IEEE Trans. Industrial Informatics + Expert Systems with Applications 2개 등록 (`JOURNAL_TARGETS`에 ISSN 추가하면 확장). paratext (TOC/errata) 자동 컷, per-venue 200편 cap. venue weight=3 (AAAI tier, > arXiv).
+- **I-3 Gemini 백엔드**: `/find-topic --model {sonnet|gemini-pro|gemini-flash}`, **default = `gemini-flash`** (~$0.01/run vs Sonnet ~$0.20). Anthropic ephemeral cache와 동일하게 Gemini `cached_content` (TTL 1h)로 4봇 prefix 공유. per-bot 토큰 telemetry → `usage.json`.
+- **I-4 Flash truncation 가드**: trend 프롬프트에 `paper_ids ≤ 30` 제약 + `finish_reason` 로깅으로 향후 MAX_TOKENS 트런케이션이 silently malformed JSON으로 빠지는 것 방지.
+
+**인프라**
+- 매일 06:00 UTC cron이 **arxiv + HF + OR + S2 + journal** 전부 한 번에 수집 (`.github/workflows/daily_collect.yml`)
+- backfill 시 OR/S2/journal은 one-shot, arxiv/HF만 per-day
+- RollingDB가 `published_date.YYMM` 기준 자동 라우팅 — back-dated 저널 import도 정확히 해당 월 파일에 들어감
+
+전체 변경 내역은 [docs/plans/v0.4-backlog.md](docs/plans/v0.4-backlog.md).
 
 ## v0.3 변경 요약
 

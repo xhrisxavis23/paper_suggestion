@@ -34,7 +34,7 @@ docs/plans/v0.3-backlog.md    # v0.3 items (current version, all shipped)
 docs/plans/v0.4-backlog.md    # v0.4 backlog (--deep PDF, journal coverage, Gemini bots)
 tests/                        # pytest unit tests
 .env.example                  # SEMANTIC_SCHOLAR_API_KEY, ANTHROPIC_API_KEY
-.github/workflows/daily_collect.yml  # daily 06:00 UTC cron + pytest gate
+.github/workflows/daily_collect.yml  # daily 06:00 UTC cron (--with-s2 --with-or --with-journal) + pytest gate
 ```
 
 ## Commands
@@ -64,7 +64,7 @@ pytest -m integration                             # live network tests
 
 ## DB conventions (read before touching `metadb/`)
 
-- **Monthly partitioning**: papers are stored in `<YYMM>_rolling.jsonl` (one file per calendar month based on `published_date`). `RollingDB.append` routes by month; `load_all` concatenates all `*_rolling.jsonl` files. Bumping individual files past ~30 MB means we should consider further partitioning.
+- **Monthly partitioning**: papers are stored in `<YYMM>_rolling.jsonl` (one file per calendar month based on `published_date`). `RollingDB.append` routes by month *regardless of source*, so back-dated journal/conference imports (e.g., a 2025-08 OpenAlex paper added in 2026-04) drop into the right `2508_rolling.jsonl` rather than today's file. `load_all` concatenates all `*_rolling.jsonl` files. Bumping individual files past ~30 MB means we should consider further partitioning.
 - **Concurrent writers**: `RollingDB.append` and `prune` take an `fcntl.flock` on `metadb/.lock` — manual + cron overlap is safe.
 - **No `id` field on disk**: the JSONL rows do *not* carry an `id` field. Readers compute it via `Paper.get_id()` at load time — this prevents stale ids from re-keying old rows if the formula changes.
 - **`get_id()` formula**: `arxiv:<id-without-version>` if arxiv_id present, else `title:<lowercased+collapsed-whitespace>`.
