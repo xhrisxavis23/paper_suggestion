@@ -100,10 +100,13 @@ Each bot reads its prompt from `prompts/`, fills in `{TOPIC}`, and is given the 
 ```bash
 python -m skills.topic_finder.scripts.run_pipeline "<keyword>" \
     --window-days <D> --clusters <K> --proposals <P> \
-    --max-papers <M> --model {sonnet|gemini-pro|gemini-flash}
+    --max-papers <M> --model {sonnet|gemini-pro|gemini-flash} \
+    [--deep [--deep-k 10]]
 ```
 
-The driver handles backend selection, prompt caching, retry-on-bad-JSON, per-bot token telemetry, and writes the report directly. Use this whenever Anthropic SDK + key (Sonnet) or `google-genai` + `GOOGLE_API_KEY` (Gemini) is available. If neither is set, run the bots inline with the Sonnet CLI snippet below.
+The driver handles backend selection, prompt caching, PDF body extraction (when `--deep`), retry-on-bad-JSON, per-bot token telemetry, and writes the report directly. Use this whenever Anthropic SDK + key (Sonnet) or `google-genai` + `GOOGLE_API_KEY` (Gemini) is available. If neither is set, run the bots inline with the Sonnet CLI snippet below.
+
+When the user passes `--deep` to `/find-topic`, propagate it (and any `--deep-k`) verbatim to `run_pipeline.py`. The `--deep` flag is fully wired through the slash command — Claude does not need to perform PDF fetching itself.
 
 **Prompt caching (I-3)**: the matched-papers JSON block is identical across all four bots, so each backend caches it once and re-uses across the 3 follow-up calls. Empirically saves ~50% of input tokens billed.
 
@@ -164,9 +167,10 @@ Tell the user:
 - If a single bot returns malformed JSON: retry once with stricter "Return JSON only, no prose" preamble; if still malformed, save the raw output to the cache dir and fail with the path.
 - If any LLM call hits rate limit: wait 60s and retry once.
 
-## Out-of-scope (v0.3)
+## Out-of-scope (v0.4)
 
-- PDF body analysis (`--deep` integration with paper_search) — still deferred.
+- PDF body analysis — **shipped in v0.4 I-1** as `--deep`. See `--deep` / `--deep-k` rows in the args table above.
+- Journal coverage (OpenAlex / Crossref) — v0.4 I-2, not yet shipped.
 - Personalization based on user's prior reads.
 - Slack/Discord webhook notifications.
 - Trend visualization (matplotlib SVG of cluster growth over time).
