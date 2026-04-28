@@ -1,2 +1,6 @@
 requests>=2.31.0
 python-dateutil>=2.8.2
+
+# v0.4 I-1 (--deep): PDF body extraction for Skeptic/Proposer.
+# Only needed when /find-topic --deep is used; harmless to install always.
+pypdf>=6.0.0

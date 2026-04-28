@@ -245,7 +245,8 @@ def estimate_cost(usage_log: list) -> dict:
 def main(topic: str, *, window_days: int = 100, k_clusters: int = 3,
          p_proposals: int = 3, max_papers: int = 100,
          keywords_file: Path | None = None,
-         model: str = "gemini-flash") -> Path:
+         model: str = "gemini-flash",
+         deep: bool = False, deep_k: int = 10) -> Path:
     _load_dotenv()
     pruned = prune_cache_dirs()
     if pruned:
@@ -369,6 +370,21 @@ def main(topic: str, *, window_days: int = 100, k_clusters: int = 3,
         + json.dumps(papers_to_context(matched), ensure_ascii=False)
     )
 
+    # I-1 (--deep): pull PDFs for top-deep_k matched papers, extract sections,
+    # build a deep_context block. Skeptic / Proposer get this in addition to
+    # the cached metadata; Trend / Gap stay metadata-only by design.
+    deep_context = ""
+    deep_stats: dict = {}
+    if deep:
+        from skills.topic_finder.scripts.pdf_extract import build_deep_context
+        deep_context, deep_stats = build_deep_context(
+            matched, k=deep_k, cache_dir=REPO_ROOT / "metadb" / ".pdfs")
+        print(f"[deep] PDFs: requested={deep_stats['requested']} "
+              f"ok={deep_stats['ok']} (cached={deep_stats['cached_hit']} "
+              f"fetched={deep_stats['fetched']}) failed={deep_stats['failed']}, "
+              f"deep_context={len(deep_context):,} chars")
+        (cache / "deep_context.md").write_text(deep_context, encoding="utf-8")
+
     # Gemini: seed the cached_content once before bot calls.
     if gemini_ctx:
         gemini_ctx.seed_cache(cached_papers_block)
@@ -396,30 +412,36 @@ def main(topic: str, *, window_days: int = 100, k_clusters: int = 3,
         (cache / "gaps.json").write_text(json.dumps(gaps, ensure_ascii=False, indent=2))
         print(f"      gap candidates: {len(gaps)}")
 
-        # §5. skeptic
+        # §5. skeptic — gets deep_context (PDF body sections) when --deep
         sk_tmpl = (PROMPT_DIR / "skeptic.md").read_text()
+        sk_user = ("## 갭 후보\n" + json.dumps(gaps, ensure_ascii=False)
+                   + "\n\n## 클러스터\n" + json.dumps(clusters, ensure_ascii=False))
+        if deep_context:
+            sk_user += "\n\n" + deep_context
         gaps_validated = call_json(
             label="skeptic",
             system=sk_tmpl,
             cached=cached_papers_block,
-            user=("## 갭 후보\n" + json.dumps(gaps, ensure_ascii=False)
-                  + "\n\n## 클러스터\n" + json.dumps(clusters, ensure_ascii=False)),
+            user=sk_user,
         )
         (cache / "gaps_validated.json").write_text(
             json.dumps(gaps_validated, ensure_ascii=False, indent=2))
         print(f"[4/5] gaps passed: {len(gaps_validated.get('passed', []))} / "
               f"rejected: {len(gaps_validated.get('rejected', []))}")
 
-        # §6. proposer
+        # §6. proposer — gets deep_context (PDF body sections) when --deep
         pr_tmpl = (PROMPT_DIR / "proposer.md").read_text()
+        pr_user = ("## 살아남은 갭\n"
+                   + json.dumps(gaps_validated.get("passed", []), ensure_ascii=False)
+                   + "\n\n## 클러스터\n" + json.dumps(clusters, ensure_ascii=False)
+                   + f"\n\n## 목표 제안 수\nP = {p_proposals}")
+        if deep_context:
+            pr_user += "\n\n" + deep_context
         proposals = call_json(
             label="proposer",
             system=pr_tmpl,
             cached=cached_papers_block,
-            user=("## 살아남은 갭\n"
-                  + json.dumps(gaps_validated.get("passed", []), ensure_ascii=False)
-                  + "\n\n## 클러스터\n" + json.dumps(clusters, ensure_ascii=False)
-                  + f"\n\n## 목표 제안 수\nP = {p_proposals}"),
+            user=pr_user,
         )
         (cache / "proposals.json").write_text(
             json.dumps(proposals, ensure_ascii=False, indent=2))
@@ -456,11 +478,20 @@ def main(topic: str, *, window_days: int = 100, k_clusters: int = 3,
             "tokens_in_cached_read": totals["in_cached_read"],
             "tokens_out": totals["out"],
             "usd_estimate": f"${totals['usd']:.4f}",
+            **({"deep": True, "deep_k": deep_k,
+                "deep_pdfs_ok": deep_stats.get("ok", 0),
+                "deep_pdfs_failed": deep_stats.get("failed", 0)}
+               if deep else {}),
         },
         window=(today - timedelta(days=window_days), today),
     )
     slug = topic.lower().replace(" ", "-")
-    suffix = "" if model == "sonnet" else f"-{model}"
+    suffix_parts = []
+    if model != "sonnet":
+        suffix_parts.append(model)
+    if deep:
+        suffix_parts.append("deep")
+    suffix = ("-" + "-".join(suffix_parts)) if suffix_parts else ""
     report_path = REPO_ROOT / "reports" / f"{today.isoformat()}-{slug}{suffix}.md"
     report_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.write_text(md, encoding="utf-8")
@@ -482,10 +513,17 @@ if __name__ == "__main__":
                          "gemini-flash (~$0.01/run); use gemini-pro for "
                          "sharper gap analysis (~$0.06) or sonnet for "
                          "highest fidelity (~$0.20).")
+    ap.add_argument("--deep", action="store_true",
+                    help="Pull PDFs for top --deep-k matched papers, extract "
+                         "intro/method/limitations sections, and feed into "
+                         "Skeptic + Proposer. Trend / Gap stay metadata-only.")
+    ap.add_argument("--deep-k", type=int, default=10,
+                    help="Number of papers to fetch PDFs for under --deep.")
     ap.add_argument("--keywords-file", type=Path, default=None)
     args = ap.parse_args()
     t0 = time.time()
     main(args.topic, window_days=args.window_days, k_clusters=args.clusters,
          p_proposals=args.proposals, max_papers=args.max_papers,
-         keywords_file=args.keywords_file, model=args.model)
+         keywords_file=args.keywords_file, model=args.model,
+         deep=args.deep, deep_k=args.deep_k)
     print(f"[wall] {time.time() - t0:.1f}s")

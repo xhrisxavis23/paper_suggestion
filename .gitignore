@@ -21,6 +21,9 @@ reports/.cache/
 # FAISS / sentence-transformers index built lazily by --match-mode embedding
 metadb/.embeddings/
 
+# v0.4 I-1: PDF body cache for --deep (immutable per paper id)
+metadb/.pdfs/
+
 # fcntl advisory lock for RollingDB
 metadb/.lock
 

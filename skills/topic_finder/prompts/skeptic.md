@@ -6,12 +6,13 @@
 - 갭 후보 M개 (id, type, description, evidence_papers, why_gap)
 - 클러스터 K개 (참조용)
 - 매칭 논문 메타 N건 (참조용)
+- (선택) **Deep PDF context** — `--deep` 플래그가 켜진 경우 상위 K개 논문의 intro / method / limitations 섹션이 별도 블록으로 제공됨. 거부 사유 (a)·(b) 판정에 본문 근거를 활용하고, 사유 (d)는 deep_context에 본문이 *없는* 경우로 한정.
 
 ## 검증 기준 (각 갭에 대해 하나라도 맞으면 거부)
-- (a) **다른 클러스터에서 이미 다룸** — 사실은 짝꿍 클러스터 안에 풀렸음
+- (a) **다른 클러스터에서 이미 다룸** — 사실은 짝꿍 클러스터 안에 풀렸음. deep_context가 있으면 method/limitations 본문에서 직접 근거 인용.
 - (b) **다른 분야에서 풀렸음** — 본 메타DB 안에 명시 근거가 있음
 - (c) **trivial 함** — 갭이 "X에 ablation 추가" 정도로 작음
-- (d) **메타로는 알 수 없음** — 본문 봐야 판정 가능 (메타는 짧으니 Skeptic은 *조심스럽게* 보존도 가능)
+- (d) **메타로는 알 수 없음** — 본문 봐야 판정 가능. deep_context에 해당 paper 본문이 *없는* 경우에만 사용. 메타만 있을 땐 *조심스럽게* 보존 가능.
 
 ## 작업
 - 각 갭마다 통과(`passed`)/거부(`rejected`)

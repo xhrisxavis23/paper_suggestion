@@ -34,6 +34,8 @@ Parsed from `/find-topic "<keyword>" [options...]`:
 | `--max-papers M` | 100 | Hard cap on papers passed into the 4-bot pipeline (ranked by `(venue_weight DESC, date DESC)` — top-tier venues outrank arXiv-only). 100 is the v0.4 default; the pipeline can scale up to ~200 within Sonnet's 200K context if you bump it. |
 | `--match-mode` | `substring` | `substring` (default) or `embedding` (sentence-transformers + FAISS, opt-in heavyweight) |
 | `--model` | `gemini-flash` | `sonnet` / `gemini-pro` / `gemini-flash`. Selects the LLM for the 4-bot pipeline. v0.4 default is `gemini-flash` (~$0.01/run, ~₩15). Step up to `gemini-pro` (~$0.06) for sharper gap analysis or `sonnet` (~$0.20) for the highest fidelity. |
+| `--deep` | off | v0.4 I-1: pull PDFs for the top `--deep-k` matched papers, extract intro/method/limitations sections, and feed into Skeptic + Proposer. Trend / Gap stay metadata-only by design. PDFs are cached at `metadb/.pdfs/` (gitignored, immutable per paper id). Adds ~10-15 sec wall and ~$0.01-$0.03 token cost. |
+| `--deep-k` | 10 | Number of top-ranked papers to fetch PDFs for under `--deep`. Bumping this past ~15 starts to crowd Skeptic/Proposer's attention budget. |
 | `--expand-only` | off | Stop after keyword expansion + match (debug) |
 | `--dry-run` | off | Show match count + token estimate then stop |
 | `--output <path>` | `reports/YYYY-MM-DD-<slug>.md` | Output path |
