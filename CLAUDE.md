@@ -86,9 +86,10 @@ pytest -m integration                             # live network tests
 
 ## Skill / pipeline gotchas
 
-- **Token budget (I-1)**: `match_substring(..., max_papers=N)` sorts by `(published_date DESC, venue_weight DESC)` and slices to N. Default cap is 200, which fits within Sonnet 200K context. Without the cap, popular topics ("rag", "agent") return 3K-6K matches → ~1M-2M token prompts that OOM. Always pass `--max-papers` from `/find-topic`.
+- **Token budget (I-1)**: `match_substring(..., max_papers=N)` sorts by `(venue_weight DESC, published_date DESC)` and slices to N. Top-tier venue papers (NeurIPS/ICML/ICLR/CVPR=5; ACL/EMNLP/NAACL/ECCV/ICCV/KDD=4; AAAI=3; HF/arXiv=2; default=1) survive the cap regardless of recency, then arXiv-tier ties break by date. Default cap is 200, which fits within Sonnet 200K context. Without the cap, popular topics ("rag", "agent") return 3K-6K matches → ~1M-2M token prompts that OOM. Always pass `--max-papers` from `/find-topic`.
 - **Prompt caching (I-3)**: the matched-papers JSON block is identical across all 4 bots. SDK calls mark it as `cache_control={"type": "ephemeral"}` so it's cached after Trend-Analyzer's call → ~50% input-token savings on the 3 subsequent calls. Falls back to plain CLI calls if `ANTHROPIC_API_KEY` / `anthropic` SDK is missing.
 - **`--window D`** on `/find-topic` maps to `--window-days D` on the match scripts.
+- **`period_count` (renamed from `weekly_count`)**: Trend-Analyzer now buckets clusters into 4 equal slices of the actual data date range (not fixed 7-day weeks), and `build_report` labels them 주차별/월별/분기별/구간별 based on bucket size. Reading older reports: `weekly_count` is still accepted as fallback in `build_report.py`.
 - **`_short_id` format**: arxiv IDs render as `P-<arxiv-id>` (lossless); non-arxiv as `P-<VENUE>-<6hex>` (collision-resistant).
 - **Author truncation**: ≤3 authors render verbatim; 4+ render as "first three, et al.".
 - **`Paper.categories`** is currently arxiv-only. HF / OpenReview / S2 leave it `[]` — any future category-based filter must handle this.

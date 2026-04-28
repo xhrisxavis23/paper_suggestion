@@ -14,26 +14,26 @@ if str(_REPO_ROOT) not in sys.path:
 from collector.src.models import Paper
 
 # Venue weights for I-1 ranking — top-tier venues outrank arXiv-only.
-# Higher = better. Unlisted venues default to 0.
+# Higher = better. Unlisted venues default to 1.
 _VENUE_WEIGHT = {
     "NeurIPS": 5,
     "ICML": 5,
     "ICLR": 5,
     "CVPR": 5,
-    "ICCV": 5,
-    "ECCV": 4,
     "ACL": 4,
     "EMNLP": 4,
     "NAACL": 4,
+    "ECCV": 4,
+    "ICCV": 4,
+    "KDD": 4,
     "AAAI": 3,
-    "KDD": 3,
-    "HF": 1,
-    "arXiv": 0,
+    "HF": 2,
+    "arXiv": 2,
 }
 
 
 def _venue_weight(p: Paper) -> int:
-    return _VENUE_WEIGHT.get(p.venue or "", 0)
+    return _VENUE_WEIGHT.get(p.venue or "", 1)
 
 
 def match_substring(
@@ -45,8 +45,8 @@ def match_substring(
     """Return papers where ANY keyword (lowercased) is a substring of
     (title + " " + abstract) lowercased. Deduplicated by id.
 
-    If `max_papers` is set, the result is ranked by (published_date DESC,
-    venue_weight DESC) and truncated. This bounds prompt size for the
+    If `max_papers` is set, the result is ranked by (venue_weight DESC,
+    published_date DESC) and truncated. This bounds prompt size for the
     downstream 4-bot pipeline (Sonnet 200K context); without a cap, popular
     topics return 2K–6K matches that blow the window.
     """
@@ -66,8 +66,8 @@ def match_substring(
     if max_papers is not None and len(out) > max_papers:
         out.sort(
             key=lambda p: (
-                p.published_date or _date.min,
                 _venue_weight(p),
+                p.published_date or _date.min,
             ),
             reverse=True,
         )

@@ -81,7 +81,7 @@ Claude Code 내에서:
 | `--clusters K` | 5 | 클러스터 개수 |
 | `--proposals P` | 5 | 제안 개수 |
 | `--window D` | 60 | rolling window 일수 (≤ DB window) |
-| `--max-papers M` | 200 | 4봇에 전달되는 hard cap. date desc + venue weight로 정렬 후 컷 |
+| `--max-papers M` | 200 | 4봇에 전달되는 hard cap. venue weight desc + date desc로 정렬 후 컷 (top-tier 학회가 arXiv-only보다 우선) |
 | `--match-mode` | `substring` | `substring` 또는 `embedding` (heavyweight, 옵트인) |
 | `--expand-only` | off | 키워드 확장만 |
 | `--dry-run` | off | 매칭/토큰 추정만 |

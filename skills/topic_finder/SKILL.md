@@ -1,5 +1,5 @@
 ---
-name: topic-finder
+name: find-topic
 description: Analyze the rolling metadata DB (default 60-day window) for the user's keyword, then run a 4-bot pipeline (Trend-Analyzer → Gap-Hunter → Skeptic → Proposer) to produce a Markdown report containing trends, gaps, and concrete research proposals. Use when the user runs /find-topic or asks to find research gaps / proposals for a topic.
 ---
 

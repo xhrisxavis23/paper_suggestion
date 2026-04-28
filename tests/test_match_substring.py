@@ -41,7 +41,7 @@ def test_match_substring_returns_empty_when_no_match():
 
 
 # I-1: max_papers ranking + cap
-def test_match_substring_max_papers_caps_by_date_then_venue():
+def test_match_substring_max_papers_caps_by_venue_then_date():
     from datetime import date as _d
     from collector.src.models import Paper
 
@@ -56,9 +56,10 @@ def test_match_substring_max_papers_caps_by_date_then_venue():
 
     out = match_substring([fresh_arxiv, older_neurips, older_arxiv, oldest],
                           ["a"], max_papers=3)
-    # date DESC: fresh_arxiv first; then between the two 04-15 papers,
-    # NeurIPS (weight 5) outranks arXiv (weight 0); oldest (03-01) drops off.
-    assert [p.arxiv_id for p in out] == ["1", "2", "3"]
+    # venue_weight DESC: NeurIPS (weight 5) outranks arXiv (weight 2);
+    # within arXiv-tier, date DESC keeps fresh_arxiv (04-20) over older_arxiv (04-15);
+    # oldest (03-01) drops off.
+    assert [p.arxiv_id for p in out] == ["2", "1", "3"]
 
 
 def test_match_substring_no_max_papers_preserves_input_order():

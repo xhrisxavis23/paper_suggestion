@@ -44,13 +44,23 @@ def build_report(
     # Section 1 — Trends
     out.append("## 1. 트렌드 요약 (Trend-Analyzer)")
     out.append("")
+    bucket_days = max(1, window_days // 4)
+    if bucket_days <= 7:
+        period_label = "주차별"
+    elif bucket_days <= 31:
+        period_label = "월별"
+    elif bucket_days <= 93:
+        period_label = "분기별"
+    else:
+        period_label = "구간별"
+    period_label_full = f"{period_label} (≈{bucket_days}d씩, 오래된→최근)"
     for i, c in enumerate(clusters, 1):
         out.append(f"### 클러스터 {i} — {c.get('name', '')}")
         out.append(f"- **설명**: {c.get('description', '')}")
-        cnt = c.get("weekly_count", [])
+        cnt = c.get("period_count") or c.get("weekly_count") or []
         out.append(f"- **빈도**: {sum(cnt) if cnt else len(c.get('paper_ids', []))}건")
         if cnt:
-            out.append(f"- **주차별**: {' → '.join(str(x) for x in cnt)}")
+            out.append(f"- **{period_label_full}**: {' → '.join(str(x) for x in cnt)}")
         top3 = c.get("top3", [])[:3]
         if top3:
             out.append("- **대표 논문**:")
