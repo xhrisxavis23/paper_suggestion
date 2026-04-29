@@ -28,6 +28,10 @@ metadb/.pdfs/
 # The .md report itself stays committed; the bulky binary bundle does not.
 reports/*/
 
+# v0.4 import_pdf inbox — README.md is committed, dropped PDFs are not.
+metadb/pdf_inbox/*.pdf
+metadb/pdf_inbox/.imported/
+
 # fcntl advisory lock for RollingDB
 metadb/.lock
 

@@ -2,7 +2,7 @@
 
 연구 주제 발굴 봇 — 사용자 키워드를 받아 최근 학계 논문 메타데이터를 분석해 **트렌드 → 갭 → 연구 제안** 보고서를 자동 생성합니다.
 
-현재 버전: **v0.4** ([backlog Important 4개 모두 shipped](docs/plans/v0.4-backlog.md)). 핵심 변경: **`--deep` PDF 본문 분석 + 아카이브 번들**, **OpenAlex 저널 수집 (`--with-journal`)**, **Gemini 백엔드 (default `gemini-flash`)**, Flash truncation 가드. 매일 06:00 UTC cron이 arxiv/HF/OR/S2/journal 전체를 한 번에 모읍니다. 다음 마일스톤: v0.5 (Personalization, Trend SVG 등).
+현재 버전: **v0.4 (closed 2026-04-29)** — [백로그 Important 4개 + `import_pdf` 보너스 모두 shipped](docs/plans/v0.4-backlog.md). 핵심 변경: **`--deep` PDF 본문 분석 + 아카이브 번들**, **OpenAlex 저널 수집 (`--with-journal`)**, **Gemini 백엔드 (default `gemini-flash`)**, Flash truncation 가드, **페이월 PDF 수동 import 워크플로우**. 매일 06:00 UTC cron이 arxiv/HF/OR/S2/journal 전체를 한 번에 모읍니다. 다음 마일스톤: [v0.5](docs/plans/v0.5-backlog.md) (Unpaywall fallback, venue preset, mixed-model 라우팅, Trend SVG 등).
 
 ## 구조
 
@@ -91,6 +91,81 @@ Claude Code 내에서:
 | `--expand-only` | off | 키워드 확장만 |
 | `--dry-run` | off | §3 scope 요약만 보고 4봇 실행 없이 중단 (§3는 항상 표시 후 사용자 승인 필요; --dry-run은 그 이후를 건너뜀) |
 
+### `--deep` 모드 — 두 캐시 위치 이해
+
+`--deep`은 두 군데에 PDF를 둡니다:
+
+| 위치 | 누가 보는가 | 키 형식 | 토픽별 분리? |
+|---|---|---|---|
+| `metadb/.pdfs/<key>.{pdf,json}` | **파이프라인** (deep 모드 캐시) | `h-<sha1>` (전역 해시) — `arxiv:<id>`는 `<id>` 그대로 | X — 전역 평면 |
+| `reports/<stem>/P-<short-id>.pdf` + `manifest.json` | **사람** (보고서 번들) | `P-<short-id>.pdf` | O — 토픽별 폴더 |
+
+캐시는 paper-id 기반 **전역**이라 같은 논문이 다른 토픽에서 또 잡혀도 한 번 받으면 영구 재사용. 보고서 번들은 사람이 보기 좋게 토픽별 폴더로 사본을 둠. 캐시 → 보고서 폴더는 hardlink (디스크 0 추가).
+
+### 페이월 venue PDF 워크플로우 (TII / ESWA 등)
+
+OA가 아닌 venue (IEEE TII, Elsevier ESWA 등)는 `--deep`이 자동으로 PDF를 받지 못합니다 — `paper.pdf_url`이 비어 있거나 DOI 게이트웨이 HTML을 반환하기 때문. 이런 경우 PDF는 **사람이** 기관 access로 받아서 캐시에 주입해야 합니다 (`import_pdf` 스크립트).
+
+#### 어떤 논문이 자동인가 / 수동인가
+
+| Venue | `--deep` 자동? | 이유 |
+|---|---|---|
+| arXiv | ✅ | `pdf_url` = `arxiv.org/pdf/<id>` — 무료 |
+| OpenReview (ICLR/ICML/NeurIPS) | ✅ | OA |
+| HF daily papers | ✅ | arXiv 링크 보유 |
+| dblp 학회 (CVPR/ICCV/ACL 등) | ⚠️ 부분적 | `pdf_url`이 출판사 게이트일 수 있음 |
+| **IEEE TII** | ❌ | IEEE Xplore 구독 필요 |
+| **Elsevier ESWA** | ❌ | Hybrid OA — 저자가 OA 비용 안 냈으면 페이월 |
+
+#### 단발 import (PDF 1편)
+
+```bash
+# 1. /find-topic --deep 실행. manifest.json 안에 raw_pdf:"missing" 표시된 항목 확인
+cat reports/<stem>/manifest.json | jq '.papers[] | select(.raw_pdf == "missing")'
+
+# 2. 기관 access로 PDF 다운로드 (예: ScienceDirect, IEEE Xplore)
+
+# 3. import — short-id는 manifest의 short_id 필드 (P- 프리픽스 있어도 없어도 됨)
+python -m skills.topic_finder.scripts.import_pdf \
+    --pdf ~/Downloads/coma-ikg.pdf \
+    --manifest reports/<stem>/manifest.json \
+    --short-id IEEETRAN-bf3127
+
+# 4. /find-topic --deep 재실행 — 캐시 히트로 본문이 deep_context에 포함됨
+```
+
+#### 일괄 import (여러 편 한 번에)
+
+두 가지 인박스 위치 지원:
+
+**(A) `metadb/pdf_inbox/<short-id>.pdf`** — 전용 인박스. 임포트 후 `.imported/`로 자동 이동.
+
+```bash
+mv ~/Downloads/coma.pdf metadb/pdf_inbox/IEEETRAN-bf3127.pdf
+mv ~/Downloads/eswa.pdf metadb/pdf_inbox/EXPERTSY-537c52.pdf
+python -m skills.topic_finder.scripts.import_pdf \
+    --manifest reports/<stem>/manifest.json --inbox
+```
+
+**(B) `reports/<stem>/<short-id>.pdf`** — 보고서 폴더에 직접 드롭. 임포트 후 **그대로 유지** (보고서 번들과 함께 보관).
+
+```bash
+cp ~/Downloads/*.pdf reports/<stem>/   # 파일명을 short-id로 rename할 필요 없음 — short-id 일치만 봄
+python -m skills.topic_finder.scripts.import_pdf \
+    --manifest reports/<stem>/manifest.json \
+    --inbox --inbox-dir reports/<stem>/
+```
+
+(B)는 `--inbox-dir`이 manifest의 부모 폴더와 같은지 자동 감지 → 같으면 파일 이동 안 함. 이미 캐시에 있는 paper는 자동 skip이라 재실행 안전.
+
+자세한 README와 사용 예: [`metadb/pdf_inbox/README.md`](metadb/pdf_inbox/README.md)
+
+### gap 개수는 왜 파라미터가 없나?
+
+`--clusters K`, `--proposals P`는 사용자가 직접 정하지만 갭 개수는 `gap_hunter.md` 안에 **3~7 범위**로 고정되어 있습니다. **갭은 *발견*하는 것이지 *생성*하는 게 아니다** — N개를 강제하면 LLM이 없는 갭을 만들어내는 위험이 있습니다. 3~7 range는 데이터가 허용하는 만큼만 출력하라는 soft cap.
+
+Gap-Hunter 출력의 일부는 Skeptic이 (a)다른 클러스터에서 이미 다룸 / (b)다른 분야에서 풀림 / (c)trivial / (d)메타로 판단 불가 4가지 사유 중 하나로 reject할 수 있습니다. **6→1 같이 reject가 많은 결과는 토픽이 saturated**하다는 시그널이지 버그가 아니에요.
+
 ### 토큰 예산 — 왜 cap이 필요한가
 
 60일 DB로 인기 토픽을 매칭하면 sonnet 200K 컨텍스트를 한참 초과합니다:
@@ -138,18 +213,21 @@ python -m skills.topic_finder.scripts.match_embedding \
 
 ## v0.4 변경 요약
 
-**Important (4)**
+**Important (4 — 모두 shipped)**
 - **I-1 `--deep` 모드**: 상위 `--deep-k` 매칭 논문의 PDF 본문에서 intro/method/limitations 추출 → Skeptic·Proposer에 추가 컨텍스트 주입. 원본 PDF는 `metadb/.pdfs/` 캐시 + `reports/<stem>/`에 하드링크 (gitignored, 디스크 0 추가). pypdf + 제목 정규식.
 - **I-2 Journal coverage**: OpenAlex 기반 저널 scraper (`--with-journal`). 현재 IEEE Trans. Industrial Informatics + Expert Systems with Applications 2개 등록 (`JOURNAL_TARGETS`에 ISSN 추가하면 확장). paratext (TOC/errata) 자동 컷, per-venue 200편 cap. venue weight=3 (AAAI tier, > arXiv).
 - **I-3 Gemini 백엔드**: `/find-topic --model {sonnet|gemini-pro|gemini-flash}`, **default = `gemini-flash`** (~$0.01/run vs Sonnet ~$0.20). Anthropic ephemeral cache와 동일하게 Gemini `cached_content` (TTL 1h)로 4봇 prefix 공유. per-bot 토큰 telemetry → `usage.json`.
 - **I-4 Flash truncation 가드**: trend 프롬프트에 `paper_ids ≤ 30` 제약 + `finish_reason` 로깅으로 향후 MAX_TOKENS 트런케이션이 silently malformed JSON으로 빠지는 것 방지.
+
+**보너스 (post-ship verification 도중 추가)**
+- **`import_pdf` 스크립트**: 페이월 venue PDF를 사람이 받은 후 deep 캐시에 주입. 단발 모드 (`--pdf` + `--short-id`) + 인박스 모드 (`metadb/pdf_inbox/` 또는 `reports/<stem>/` 직접 드롭). 캐시는 paper-id 기반 영구 보존. 자세한 사용법은 위 §"페이월 venue PDF 워크플로우" 참고.
 
 **인프라**
 - 매일 06:00 UTC cron이 **arxiv + HF + OR + S2 + journal** 전부 한 번에 수집 (`.github/workflows/daily_collect.yml`)
 - backfill 시 OR/S2/journal은 one-shot, arxiv/HF만 per-day
 - RollingDB가 `published_date.YYMM` 기준 자동 라우팅 — back-dated 저널 import도 정확히 해당 월 파일에 들어감
 
-전체 변경 내역은 [docs/plans/v0.4-backlog.md](docs/plans/v0.4-backlog.md).
+전체 변경 내역은 [docs/plans/v0.4-backlog.md](docs/plans/v0.4-backlog.md). v0.5 백로그(미해결 + 새 항목)는 [docs/plans/v0.5-backlog.md](docs/plans/v0.5-backlog.md).
 
 ## v0.3 변경 요약
 
@@ -179,4 +257,4 @@ python -m skills.topic_finder.scripts.match_embedding \
 - 코어: `requests`, `python-dateutil`, `pytest`
 - SDK 캐싱: `anthropic` (옵션)
 - 임베딩 매칭: `sentence-transformers`, `faiss-cpu` (옵션, ~2GB)
-- Layer 2는 Claude Sonnet 4.6 사용 (호출당 ~600원, 캐싱 시 ~300원)
+- Layer 2 default: **gemini-flash** (호출당 ~$0.01 ≈ 15원). Sonnet 4.6 / gemini-pro도 선택 가능 (Sonnet ~$0.20, Pro ~$0.06–0.15)

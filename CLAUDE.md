@@ -19,19 +19,23 @@ collector/
 skills/topic_finder/
   SKILL.md                    # /find-topic spec — read this for pipeline details
   prompts/*.md                # 4-bot prompts (expand, trend, gap, skeptic, proposer)
-  scripts/{load_metadb,match_substring,match_embedding,build_report}.py
+  scripts/{load_metadb,match_substring,match_embedding,build_report,run_pipeline,pdf_extract,import_pdf}.py
 metadb/
   <YYMM>_rolling.jsonl        # 2602/2603/2604_rolling.jsonl etc. — DO NOT hand-edit
   daily/<YYYY-MM-DD>.md       # daily digest of newly-added papers (skipped on weekends)
   stats.json                  # latest run snapshot
   stats_history.jsonl         # append-only history (90-day retention via CI)
   .embeddings/                # FAISS index + ids (gitignored, only for --match-mode embedding)
+  .pdfs/                      # --deep cache: <key>.pdf + <key>.json (gitignored, paper-id keyed)
+  pdf_inbox/                  # drop paywall PDFs here as <short-id>.pdf for batch import
   .lock                       # advisory file lock for concurrent writers
 reports/<YYYY-MM-DD>-<slug>.md  # 4-bot output reports
+reports/<stem>/               # --deep PDF archive bundle (manifest.json + hardlinks, gitignored)
 docs/specs/                   # design doc
 docs/plans/v0.2-backlog.md    # all v0.2 items shipped
 docs/plans/v0.3-backlog.md    # v0.3 items (current version, all shipped)
-docs/plans/v0.4-backlog.md    # v0.4 backlog (--deep PDF, journal coverage, Gemini bots)
+docs/plans/v0.4-backlog.md    # v0.4 backlog (closed — --deep PDF, journal coverage, Gemini bots, import_pdf bridge)
+docs/plans/v0.5-backlog.md    # v0.5 backlog (current — Unpaywall fallback, venue presets, mixed-model, etc.)
 tests/                        # pytest unit tests
 .env.example                  # SEMANTIC_SCHOLAR_API_KEY, ANTHROPIC_API_KEY
 .github/workflows/daily_collect.yml  # daily 06:00 UTC cron (--with-s2 --with-or --with-journal) + pytest gate
@@ -94,6 +98,8 @@ pytest -m integration                             # live network tests
 - **Default scope (v0.4)**: `--window-days 100`, `--max-papers 100`, `--clusters 3`, `--proposals 3`. The 100/100 pair was tuned on observed match densities (most topics produce 50–150 matches in 100 days; top-tier venue ranking ensures conference papers survive the cap before arXiv-only siblings). K=3, P=3 keeps trend output focused and stops Proposer from forcing duplicates when Skeptic only passes 2–3 gaps.
 - **`--deep` mode (v0.4 I-1)**: pulls PDFs for the top `--deep-k` (default 10) matched papers, extracts intro / method / limitations via pypdf + heading heuristics in `skills/topic_finder/scripts/pdf_extract.py`, caches under `metadb/.pdfs/` (gitignored, paper-id keyed, immutable, both `<id>.json` for sections and `<id>.pdf` for raw bytes), and prepends the resulting deep-context block to the Skeptic + Proposer user messages only. Trend / Gap stay metadata-only by design. Failure modes are graceful: any single paper that 4xx/5xx's or that pypdf can't parse is silently dropped from the context.
 - **PDF archive bundle (v0.4 I-1)**: when `--deep` is on, the same raw PDFs are hardlinked into `reports/<report-stem>/<short-id>.pdf` so users can browse the source bundle alongside the markdown report. `manifest.json` in the same folder lists each paper's id / title / venue / date / source URL. `reports/*/` is gitignored — only the `.md` report itself is committed. Cross-FS fallback uses `shutil.copy2`. `pdf_extract.get_or_fetch(..., ensure_raw_pdf=True)` lazy-upgrades older cache entries that pre-date the archive feature.
+- **Paywall PDF import (v0.4 post-ship)**: paywalled venues (TII / ESWA / generally any non-OA journal) cannot be auto-fetched — `paper.pdf_url` is empty or returns DOI-gateway HTML. After human downloads via institutional access, `python -m skills.topic_finder.scripts.import_pdf` writes the bytes + extracted-sections JSON into `metadb/.pdfs/` so subsequent `--deep` runs hit the cache. Two flows: single-file (`--pdf <path> --short-id <sid>`) and inbox batch (`metadb/pdf_inbox/<short-id>.pdf` *or* dropping straight into `reports/<stem>/` and pointing `--inbox-dir` at it — the script auto-detects "same dir as manifest" and keeps PDFs in place rather than archiving). Cache is paper-id-keyed and persists across all future runs that match the same paper. Manifest entries with `raw_pdf: "missing"` are exactly the ones needing human action.
+- **Gap count is intentionally not a CLI param**: clusters K and proposals P are user-controlled, but Gap-Hunter outputs 3–7 candidates per `gap_hunter.md` (hardcoded range). Rationale: gaps are *discovered*, not *targeted* — forcing N gaps risks fabrication. Skeptic then filters per (a) already addressed in another cluster / (b) solved elsewhere in DB / (c) trivial / (d) needs body text (when no `--deep`). Heavy-reject runs (e.g., 6→1) are a saturation signal for the topic, not a bug. v0.5 backlog has `--gap-count` as a candidate but the bias is to keep it auto.
 - **`--window D`** on `/find-topic` maps to `--window-days D` on the match scripts.
 - **`period_count` (renamed from `weekly_count`)**: Trend-Analyzer now buckets clusters into 4 equal slices of the actual data date range (not fixed 7-day weeks), and `build_report` labels them 주차별/월별/분기별/구간별 based on bucket size. Reading older reports: `weekly_count` is still accepted as fallback in `build_report.py`.
 - **`_short_id` format**: arxiv IDs render as `P-<arxiv-id>` (lossless); non-arxiv as `P-<VENUE>-<6hex>` (collision-resistant).
