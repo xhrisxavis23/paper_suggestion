@@ -2,7 +2,7 @@ name: Daily metadata collect
 
 on:
   schedule:
-    - cron: "0 6 * * *"
+    - cron: "15 21 * * *"  # UTC 21:15 = KST 06:15 (정각 회피로 GitHub Actions 지연 완화)
   workflow_dispatch: {}
 
 permissions:

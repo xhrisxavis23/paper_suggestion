@@ -65,6 +65,9 @@ def parse_args() -> argparse.Namespace:
                         "(off by default; one-shot per run, ignores --date).")
     p.add_argument("--root", default=".",
                    help="Repo root (paths under metadb/ are resolved here)")
+    p.add_argument("--no-push", action="store_true",
+                   help="Skip auto-commit + push of metadb/ changes "
+                        "(default: commit & push to current branch).")
     return p.parse_args()
 
 
@@ -157,6 +160,11 @@ def main() -> int:
 
     logger.info("Daily collect done: fetched=%d, added=%d, pruned=%d, in_db=%d, failures=%d",
                 len(all_papers), len(new_papers), pruned, total_in_db, len(failures))
+
+    if not args.no_push:
+        from .src.git_sync import commit_metadb
+        commit_metadb(root, f"data: rolling DB update {target_date.isoformat()}")
+
     return 0
 
 

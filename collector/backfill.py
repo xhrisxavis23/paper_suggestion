@@ -49,6 +49,9 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--with-s2", action="store_true")
     p.add_argument("--with-journal", action="store_true")
     p.add_argument("--root", default=".")
+    p.add_argument("--no-push", action="store_true",
+                   help="Skip auto-commit + push of metadb/ changes "
+                        "(default: one commit at end of backfill).")
     return p.parse_args()
 
 
@@ -140,6 +143,11 @@ def main() -> int:
     print("Coverage by month (in DB after backfill):")
     for ym in sorted(by_month):
         print(f"  {ym}: {by_month[ym]}")
+
+    if not args.no_push:
+        from .src.git_sync import commit_metadb
+        commit_metadb(root, f"data: backfill {start.isoformat()}..{end.isoformat()}")
+
     return 0
 
 

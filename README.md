@@ -2,11 +2,11 @@
 
 연구 주제 발굴 봇 — 사용자 키워드를 받아 최근 학계 논문 메타데이터를 분석해 **트렌드 → 갭 → 연구 제안** 보고서를 자동 생성합니다.
 
-현재 버전: **v0.4 (closed 2026-04-29)** — [백로그 Important 4개 + `import_pdf` 보너스 모두 shipped](docs/plans/v0.4-backlog.md). 핵심 변경: **`--deep` PDF 본문 분석 + 아카이브 번들**, **OpenAlex 저널 수집 (`--with-journal`)**, **Gemini 백엔드 (default `gemini-flash`)**, Flash truncation 가드, **페이월 PDF 수동 import 워크플로우**. 매일 06:00 UTC cron이 arxiv/HF/OR/S2/journal 전체를 한 번에 모읍니다. 다음 마일스톤: [v0.5](docs/plans/v0.5-backlog.md) (Unpaywall fallback, venue preset, mixed-model 라우팅, Trend SVG 등).
+현재 버전: **v0.4 (closed 2026-04-29)** — [백로그 Important 4개 + `import_pdf` 보너스 모두 shipped](docs/plans/v0.4-backlog.md). 핵심 변경: **`--deep` PDF 본문 분석 + 아카이브 번들**, **OpenAlex 저널 수집 (`--with-journal`)**, **Gemini 백엔드 (default `gemini-flash`)**, Flash truncation 가드, **페이월 PDF 수동 import 워크플로우**. **매일 한국시간(KST) 06:15에 한 번** GitHub Actions cron이 arxiv/HF/OR/S2/journal 전체를 한 번에 모으고, 수집 후 자동으로 metadb 변경분을 commit·push 합니다. 다음 마일스톤: [v0.5](docs/plans/v0.5-backlog.md) (Unpaywall fallback, venue preset, mixed-model 라우팅, Trend SVG 등).
 
 ## 구조
 
-- **Layer 1: Collector** (Python CLI / cron) — 매일 06:00 UTC GitHub Actions가 arXiv·HF·OpenReview(12 학회)·Semantic Scholar·OpenAlex(저널) **전체**를 수집. **500일 rolling DB** 유지 (2025-01-01 이후 데이터 보존), `metadb/<YYMM>_rolling.jsonl`로 `published_date.YYMM` 기준 월별 분할 — back-dated 저널/학회 import도 자동으로 올바른 파일에 라우팅됨.
+- **Layer 1: Collector** (Python CLI / cron) — **매일 KST 06:15** (= UTC 21:15) GitHub Actions가 arXiv·HF·OpenReview(12 학회)·Semantic Scholar·OpenAlex(저널) **전체**를 한 번에 수집하고 자동 commit·push. **500일 rolling DB** 유지 (2025-01-01 이후 데이터 보존), `metadb/<YYMM>_rolling.jsonl`로 `published_date.YYMM` 기준 월별 분할 — back-dated 저널/학회 import도 자동으로 올바른 파일에 라우팅됨.
 - **Layer 2: topic-finder skill** (Claude Code) — 사용자 키워드 → 매칭 (substring 또는 embedding) → top-100 cap → 4봇 회의 (Trend → Gap → Skeptic → Proposer, prompt cached, default Gemini Flash) → Markdown 보고서. `--deep`이면 상위 N편 PDF 본문(intro/method/limitations) 추출 후 Skeptic·Proposer에 추가 컨텍스트 주입.
 
 자세한 설계: [docs/specs/2026-04-26-paper-suggestion-design.md](docs/specs/2026-04-26-paper-suggestion-design.md)
@@ -50,7 +50,13 @@ python -m collector.main --with-journal
 # 백필 — OR/S2/journal은 target_date 무시하므로 루프 시작 시 1번만 fetch (one-shot)
 python -m collector.backfill --start 2025-01-01 --end 2026-04-27 --with-or --with-journal
 python -m collector.backfill --days 30 --with-s2
+
+# 자동 commit·push 끄기 (디버깅·로컬 실험 시)
+python -m collector.main --no-push
+python -m collector.backfill --start 2025-01-01 --no-push
 ```
+
+> **자동 commit·push 기본 켜짐** — `main`은 1회당, `backfill`은 range 끝나고 1회 `metadb/`만 stage→commit→push. 메시지: `data: rolling DB update YYYY-MM-DD` / `data: backfill <start>..<end>`. push 실패하면 commit은 로컬에 보존되니 나중에 `git push`만 다시 하면 복구. 로직: [`collector/src/git_sync.py`](collector/src/git_sync.py).
 
 산출물:
 - `metadb/<YYMM>_rolling.jsonl` — 월별 인덱스. RollingDB가 디렉터리 통째로 읽어 합침
@@ -59,8 +65,9 @@ python -m collector.backfill --days 30 --with-s2
 - `metadb/stats_history.jsonl` — append-only 이력 (CI가 90일 초과분 청소)
 
 자동 실행:
-- `.github/workflows/daily_collect.yml` — GitHub Actions 매일 06:00 UTC, **`--with-s2 --with-or --with-journal`** 모두 켜고 실행 (pytest 게이트 통과 후 commit). `OPENALEX_MAILTO` secret 설정 시 OpenAlex polite pool에 들어감 (rate-limit 완화).
-- 로컬 cron 옵션: `0 6 * * * cd <repo> && .venv/bin/python -m collector.main --with-s2 --with-or --with-journal >> cron_collect.log 2>&1` (시스템 TZ가 KST면 06:00 KST)
+- `.github/workflows/daily_collect.yml` — GitHub Actions **매일 KST 06:15** (= UTC 21:15, cron `15 21 * * *`), **`--with-s2 --with-or --with-journal`** 모두 켜고 실행 (pytest 게이트 통과 후 bot 계정으로 commit·push). `OPENALEX_MAILTO` secret 설정 시 OpenAlex polite pool에 들어감 (rate-limit 완화). GHA cron은 정각 부하로 수~수십 분 지연되는 게 흔해서 `15` 분으로 둠.
+- 로컬 cron 옵션: `15 6 * * * cd <repo> && .venv/bin/python -m collector.main --with-s2 --with-or --with-journal >> cron_collect.log 2>&1` (시스템 TZ가 KST 가정 — UTC면 `15 21 * * *`)
+- 로컬 수동 실행도 자동 commit·push가 기본이므로, GHA가 무엇을 돌리든 동일한 결과가 항상 origin에 반영됨 (충돌 시 push 실패 → commit 보존).
 
 ## Layer 2 사용 — 연구 주제 보고서 생성
 
@@ -223,7 +230,8 @@ python -m skills.topic_finder.scripts.match_embedding \
 - **`import_pdf` 스크립트**: 페이월 venue PDF를 사람이 받은 후 deep 캐시에 주입. 단발 모드 (`--pdf` + `--short-id`) + 인박스 모드 (`metadb/pdf_inbox/` 또는 `reports/<stem>/` 직접 드롭). 캐시는 paper-id 기반 영구 보존. 자세한 사용법은 위 §"페이월 venue PDF 워크플로우" 참고.
 
 **인프라**
-- 매일 06:00 UTC cron이 **arxiv + HF + OR + S2 + journal** 전부 한 번에 수집 (`.github/workflows/daily_collect.yml`)
+- **매일 KST 06:15** cron이 **arxiv + HF + OR + S2 + journal** 전부 한 번에 수집 (`.github/workflows/daily_collect.yml`)
+- 수집 후 `metadb/` 변경분을 자동 commit·push (로컬 `main`/`backfill`도 동일, [`collector/src/git_sync.py`](collector/src/git_sync.py); `--no-push`로 opt-out)
 - backfill 시 OR/S2/journal은 one-shot, arxiv/HF만 per-day
 - RollingDB가 `published_date.YYMM` 기준 자동 라우팅 — back-dated 저널 import도 정확히 해당 월 파일에 들어감
 

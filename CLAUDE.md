@@ -15,7 +15,7 @@ collector/
   backfill.py                 # python -m collector.backfill --start ... --end ...
   src/db.py                   # RollingDB (monthly-partitioned JSONL store + flock)
   src/scrapers/               # arxiv, huggingface, openreview, semantic_scholar, journal (OpenAlex)
-  src/{config,formatter,models}.py
+  src/{config,formatter,models,git_sync}.py
 skills/topic_finder/
   SKILL.md                    # /find-topic spec — read this for pipeline details
   prompts/*.md                # 4-bot prompts (expand, trend, gap, skeptic, proposer)
@@ -38,7 +38,7 @@ docs/plans/v0.4-backlog.md    # v0.4 backlog (closed — --deep PDF, journal cov
 docs/plans/v0.5-backlog.md    # v0.5 backlog (current — Unpaywall fallback, venue presets, mixed-model, etc.)
 tests/                        # pytest unit tests
 .env.example                  # SEMANTIC_SCHOLAR_API_KEY, ANTHROPIC_API_KEY
-.github/workflows/daily_collect.yml  # daily 06:00 UTC cron (--with-s2 --with-or --with-journal) + pytest gate
+.github/workflows/daily_collect.yml  # daily 21:15 UTC = KST 06:15 cron (--with-s2 --with-or --with-journal) + pytest gate
 ```
 
 ## Commands
@@ -49,11 +49,14 @@ python -m venv .venv && source .venv/bin/activate
 pip install -r collector/requirements.txt pytest
 
 # Layer 1: collect (arxiv + hf default; --with-s2 / --with-or / --with-journal to opt in)
+# Default behavior: after a successful run, auto-commit metadb/ + push to current branch.
+# Pass --no-push to suppress (e.g., during debugging).
 python -m collector.main                          # today, defaults
 python -m collector.main --date 2026-04-26
 python -m collector.main --with-s2                # include Semantic Scholar
 python -m collector.main --with-or                # 12 venues pre-configured
 python -m collector.main --with-journal           # OpenAlex: IEEE TII + ESWA
+python -m collector.main --no-push                # local debug, leave commit to user
 python -m collector.backfill --start 2025-01-01 --end "$(date +%F)" --with-or --with-journal
 
 # Tests
@@ -78,6 +81,7 @@ pytest -m integration                             # live network tests
 - **`metadb/daily/*.md`** holds *newly-added* papers only (post-dedup), not raw fetch lists. CI sweeps files older than 60 days. Weekend runs with no new papers skip the digest write entirely (arxiv has no Sat/Sun submissions).
 - **`metadb/stats_history.jsonl`** is append-only (one row per collector run); CI prunes rows older than 90 days. Use it to trace when failures appeared.
 - **`stats.json.failures`**: list[str] of partial failures (e.g. `"s2:AAAI:rate-limited (429)"`). Don't rely solely on `fetched_per_source` counts — soft failures don't show up there.
+- **Auto-commit + push**: `collector/src/git_sync.py:commit_metadb` runs at the end of `main` (one commit per run, message `data: rolling DB update YYYY-MM-DD`) and `backfill` (one commit at end of range, message `data: backfill <start>..<end>`). Stages **only `metadb/`** so unrelated dirty files in the working tree are left alone. Push failures log a warning and keep the commit local — re-`git push` recovers. Pass `--no-push` to skip entirely. CI workflow keeps its own bot-author commit step in `.github/workflows/daily_collect.yml` (independent code path).
 
 ## Scraper gotchas
 
