@@ -1,12 +1,22 @@
 {
-  "last_run": "2026-04-28",
-  "ran_at": "2026-04-28T09:05:50.753704+00:00",
+  "last_run": "2026-04-29",
+  "ran_at": "2026-04-29T08:06:57.883641+00:00",
   "fetched_per_source": {
+    "arxiv": 367,
+    "hf": 19,
+    "openreview": 22859,
+    "s2": 4,
     "journal": 400
   },
-  "total_fetched": 400,
-  "added_to_db": 400,
+  "total_fetched": 23649,
+  "added_to_db": 275,
   "pruned": 0,
-  "total_in_rolling": 183382,
-  "failures": []
+  "total_in_rolling": 183657,
+  "failures": [
+    "s2:AAAI:rate-limited (429)",
+    "s2:NeurIPS:rate-limited (429)",
+    "s2:ICML:rate-limited (429)",
+    "s2:ICLR:rate-limited (429)",
+    "s2:KDD:rate-limited (429)"
+  ]
 }
