@@ -1,14 +1,14 @@
 {
-  "last_run": "2026-05-01",
-  "ran_at": "2026-05-01T06:01:16.450599+00:00",
+  "last_run": "2026-05-02",
+  "ran_at": "2026-05-02T06:02:09.602624+00:00",
   "fetched_per_source": {
     "arxiv": 452,
-    "hf": 15,
+    "hf": 24,
     "openreview": 22859
   },
-  "total_fetched": 23326,
-  "added_to_db": 350,
+  "total_fetched": 23335,
+  "added_to_db": 9,
   "pruned": 0,
-  "total_in_rolling": 184250,
+  "total_in_rolling": 184259,
   "failures": []
 }
