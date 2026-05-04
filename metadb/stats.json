@@ -1,16 +1,14 @@
 {
-  "last_run": "2026-05-03",
-  "ran_at": "2026-05-03T06:05:58.742966+00:00",
+  "last_run": "2026-05-04",
+  "ran_at": "2026-05-04T06:03:06.296776+00:00",
   "fetched_per_source": {
-    "arxiv": 429,
-    "hf": 24,
+    "arxiv": 308,
+    "hf": 10,
     "openreview": 22859
   },
-  "total_fetched": 23312,
-  "added_to_db": 1,
+  "total_fetched": 23177,
+  "added_to_db": 221,
   "pruned": 0,
-  "total_in_rolling": 184260,
-  "failures": [
-    "arxiv:cs.RO:ReadTimeout: HTTPSConnectionPool(host='export.arxiv.org', port=443): Read timed out. (read timeout=30)"
-  ]
+  "total_in_rolling": 184481,
+  "failures": []
 }
