@@ -1,28 +1,15 @@
 {
-  "last_run": "2026-05-10",
-  "ran_at": "2026-05-10T06:02:53.807320+00:00",
+  "last_run": "2026-05-11",
+  "ran_at": "2026-05-11T06:08:41.103847+00:00",
   "fetched_per_source": {
-    "arxiv": 873,
-    "hf": 38,
-    "openreview": 63556
+    "arxiv": 687,
+    "hf": 30,
+    "openreview": 65151
   },
-  "total_fetched": 64467,
-  "added_to_db": 3,
-  "total_in_rolling": 227599,
+  "total_fetched": 65868,
+  "added_to_db": 511,
+  "total_in_rolling": 228110,
   "failures": [
-    "openreview:dblp.org/conf/KDD/2025:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FKDD%2F2025&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/SIGMOD/2023:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FSIGMOD%2F2023&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/SIGMOD/2024:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FSIGMOD%2F2024&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/SIGMOD/2025:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FSIGMOD%2F2025&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/VLDB/2023:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FVLDB%2F2023&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/VLDB/2024:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FVLDB%2F2024&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/VLDB/2025:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FVLDB%2F2025&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/AISTATS/2023:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FAISTATS%2F2023&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/AISTATS/2024:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FAISTATS%2F2024&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/AISTATS/2025:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FAISTATS%2F2025&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/ICAIF/2020:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICAIF%2F2020&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/ICAIF/2021:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICAIF%2F2021&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/ICAIF/2022:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICAIF%2F2022&limit=1000&offset=0&details=replyCount",
-    "openreview:dblp.org/conf/ICAIF/2023:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICAIF%2F2023&limit=1000&offset=0&details=replyCount"
+    "arxiv:cs.CL:ReadTimeout: HTTPSConnectionPool(host='export.arxiv.org', port=443): Read timed out. (read timeout=30)"
   ]
 }
