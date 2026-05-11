@@ -11,7 +11,9 @@ On-disk layout:
 
 Each file holds papers whose `published_date` falls in that calendar month
 (YY = last two digits of year, MM = month). Splitting keeps individual files
-under GitHub's 50 MB recommendation and bounds rewrites on prune.
+under GitHub's 50 MB recommendation. Append-only: once collected, a paper
+is kept indefinitely (no date-based prune). De-duplication happens on
+append via `Paper.get_id()`.
 """
 from __future__ import annotations
 
@@ -19,7 +21,7 @@ import contextlib
 import fcntl
 import json
 import logging
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 from typing import Iterable, List
 
@@ -53,8 +55,7 @@ def _flock(lock_path: Path):
 
 
 class RollingDB:
-    """Append-only monthly-partitioned JSONL DB with id-based dedup +
-    date-based prune.
+    """Append-only monthly-partitioned JSONL DB with id-based dedup.
 
     Note: `append` re-reads every month file on every call (O(n) per call,
     O(n*m) if called m times for chunked input). Fine at current scale; if
@@ -168,42 +169,3 @@ class RollingDB:
                         f.write(json.dumps(p.to_jsonl_dict(),
                                            ensure_ascii=False) + "\n")
             return new_papers
-
-    def prune(self, today: date, window_days: int = 30) -> int:
-        cutoff = today - timedelta(days=window_days)
-        cutoff_month = _month_key(cutoff)
-        dropped = 0
-
-        with _flock(self._lock_path()):
-            for f in self._all_files():
-                file_month = f.stem.split("_", 1)[0]
-                if file_month < cutoff_month:
-                    # Whole month before cutoff — drop the whole file.
-                    with f.open("r", encoding="utf-8") as fp:
-                        dropped += sum(1 for line in fp if line.strip())
-                    f.unlink()
-                    continue
-                if file_month > cutoff_month:
-                    # Whole month after cutoff — keep as-is.
-                    continue
-                # Cutoff falls inside this month — filter row by row.
-                kept: List[Paper] = []
-                with f.open("r", encoding="utf-8") as fp:
-                    total = 0
-                    for line in fp:
-                        line = line.strip()
-                        if not line:
-                            continue
-                        total += 1
-                        paper = Paper.from_jsonl_dict(json.loads(line))
-                        if paper.published_date and paper.published_date >= cutoff:
-                            kept.append(paper)
-                dropped += total - len(kept)
-                if not kept:
-                    f.unlink()
-                else:
-                    with f.open("w", encoding="utf-8") as fp:
-                        for p in kept:
-                            fp.write(json.dumps(p.to_jsonl_dict(),
-                                                ensure_ascii=False) + "\n")
-        return dropped

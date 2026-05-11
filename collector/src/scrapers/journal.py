@@ -5,7 +5,7 @@ OpenAlex is free (no API key needed), structured, and the ISSN filter on
 hitting per-publisher quirks.
 
 For each `JOURNAL_TARGETS` entry, fetch papers published since
-`target_date − ROLLING_WINDOW_DAYS`, paginate up to `JOURNAL_PER_VENUE_LIMIT`,
+`target_date − SCRAPE_WINDOW_DAYS`, paginate up to `JOURNAL_PER_VENUE_LIMIT`,
 and emit `Paper` rows with `source = "openalex"` and `venue` = the journal's
 display name. `target_date` is used only as the upper bound — like S2/OR,
 journals don't have a meaningful per-day publication cadence at our cadence,
@@ -24,7 +24,7 @@ import requests
 from ..config import (
     JOURNAL_PER_VENUE_LIMIT,
     JOURNAL_TARGETS,
-    ROLLING_WINDOW_DAYS,
+    SCRAPE_WINDOW_DAYS,
     USER_AGENT,
 )
 from ..models import Paper
@@ -71,10 +71,10 @@ class JournalScraper:
         self.failures: List[str] = []
 
     def fetch(self, target_date: date) -> List[Paper]:
-        """target_date is the upper bound; lower bound = target − rolling window."""
+        """target_date is the upper bound; lower bound = target − scrape window."""
         self.failures = []
         out: List[Paper] = []
-        cutoff = target_date - timedelta(days=ROLLING_WINDOW_DAYS)
+        cutoff = target_date - timedelta(days=SCRAPE_WINDOW_DAYS)
         for tgt in JOURNAL_TARGETS:
             try:
                 out.extend(self._fetch_journal(

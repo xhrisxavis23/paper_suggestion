@@ -9,7 +9,7 @@ from typing import List
 
 import requests
 
-from ..config import ROLLING_WINDOW_DAYS, S2_VENUES, USER_AGENT
+from ..config import SCRAPE_WINDOW_DAYS, S2_VENUES, USER_AGENT
 from ..models import Paper
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class SemanticScholarScraper:
     def fetch(self, target_date: date) -> List[Paper]:
         self.failures = []
         out: List[Paper] = []
-        cutoff = target_date - timedelta(days=ROLLING_WINDOW_DAYS)
+        cutoff = target_date - timedelta(days=SCRAPE_WINDOW_DAYS)
         for venue in S2_VENUES:
             try:
                 out.extend(self._fetch_venue(venue, cutoff, target_date))

@@ -16,22 +16,31 @@ from collector.src.models import Paper
 # Venue weights for I-1 ranking — top-tier venues outrank arXiv-only.
 # Higher = better. Unlisted venues default to 1.
 _VENUE_WEIGHT = {
+    # Tier 5 — top conferences (incl. finance/IE-aligned). Finance workshops
+    # at NeurIPS/ICML auto-inherit this tier via venue_short = "NeurIPS"/"ICML".
     "NeurIPS": 5,
     "ICML": 5,
     "ICLR": 5,
     "CVPR": 5,
+    "AISTATS": 5,
+    "ICAIF": 5,
+    "SIGMOD": 5,
+    "VLDB": 5,
+    # Tier 4 — strong NLP/CV/DM + finance/IE journals
     "ACL": 4,
     "EMNLP": 4,
     "NAACL": 4,
     "ECCV": 4,
     "ICCV": 4,
     "KDD": 4,
+    "Journal of Financial Data Science": 4,
+    "Quantitative Finance": 4,
+    "Decision Support Systems": 4,
+    # Tier 3
     "AAAI": 3,
-    # Journals from JOURNAL_TARGETS (--with-journal). Set at AAAI tier —
-    # above arXiv preprints, below top-tier conferences. Tune up per-topic
-    # if you want applied/manufacturing work to surface ahead of preprints.
     "IEEE Trans. Industrial Informatics": 3,
     "Expert Systems with Applications": 3,
+    # Tier 2 — preprint
     "HF": 2,
     "arXiv": 2,
 }

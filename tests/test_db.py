@@ -1,7 +1,5 @@
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
-
-import pytest
 
 from collector.src.models import Paper
 from collector.src.db import RollingDB
@@ -66,38 +64,6 @@ def test_append_partitions_by_month(tmp_path: Path):
     apr_lines = (tmp_path / "2604_rolling.jsonl").read_text().splitlines()
     assert len(apr_lines) == 1
     assert "2404.0001" in apr_lines[0]
-
-
-def test_prune_drops_whole_old_month_files(tmp_path: Path):
-    db = RollingDB(tmp_path)
-    today = date(2026, 4, 26)
-    fresh = make_paper("2404.0001", today - timedelta(days=10))   # 2026-04-16
-    stale = make_paper("2402.0001", date(2026, 2, 1))             # 2602 month
-
-    db.append([fresh, stale])
-    pruned = db.prune(today=today, window_days=30)  # cutoff 2026-03-27
-
-    # 2602 file (whole month before cutoff) gone; 2604 untouched.
-    assert pruned == 1
-    assert not (tmp_path / "2602_rolling.jsonl").exists()
-    assert (tmp_path / "2604_rolling.jsonl").exists()
-    remaining_ids = {p.get_id() for p in db.load_all()}
-    assert remaining_ids == {"arxiv:2404.0001"}
-
-
-def test_prune_filters_within_cutoff_month(tmp_path: Path):
-    db = RollingDB(tmp_path)
-    today = date(2026, 4, 26)                                    # cutoff = 04-12
-    keep = make_paper("2404.0001", date(2026, 4, 20))            # after cutoff
-    drop_early = make_paper("2404.0002", date(2026, 4, 1))       # before cutoff
-    keep_at_cutoff = make_paper("2404.0003", date(2026, 4, 12))  # == cutoff (kept)
-
-    db.append([keep, drop_early, keep_at_cutoff])
-    pruned = db.prune(today=today, window_days=14)
-
-    assert pruned == 1
-    remaining = {p.get_id() for p in db.load_all()}
-    assert remaining == {"arxiv:2404.0001", "arxiv:2404.0003"}
 
 
 def test_load_all_on_missing_dir_returns_empty(tmp_path: Path):

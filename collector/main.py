@@ -7,10 +7,12 @@ Run:
     python -m collector.main --with-s2          # opt in to Semantic Scholar
     python -m collector.main --with-or          # opt in to OpenReview
 
-OpenReview and Semantic Scholar are off by default in v0.3 because in the
-typical configuration both contribute zero rows to the rolling window
-(OR submission cdates are pre-cutoff; S2 search-API rate-limits without
-an API key). Opt in only when the surrounding env supports them.
+OpenReview and Semantic Scholar are off by default since neither contributes
+new rows on a typical day (OR is one-shot per venue; S2 search-API rate-limits
+without an API key). Opt in only when the surrounding env supports them.
+
+The DB is append-only — once collected, papers are kept indefinitely. There
+is no date-based prune; dedup on append is the only data-removal mechanism.
 """
 from __future__ import annotations
 
@@ -27,7 +29,6 @@ from .src.config import (
     DAILY_DIR,
     METADB_DIR,
     ROLLING_DIR,
-    ROLLING_WINDOW_DAYS,
     STATS_HISTORY_JSONL,
     STATS_JSON,
 )
@@ -55,8 +56,8 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--skip-hf", action="store_true",
                    help="Skip HuggingFace daily papers (on by default).")
     p.add_argument("--with-or", action="store_true",
-                   help="Include OpenReview (off by default — most submissions "
-                        "are dated pre-cutoff and get 100%% pruned).")
+                   help="Include OpenReview (off by default; one-shot per "
+                        "venue, so a single run is enough — daily isn't needed).")
     p.add_argument("--with-s2", action="store_true",
                    help="Include Semantic Scholar (off by default — requires "
                         "SEMANTIC_SCHOLAR_API_KEY to return data).")
@@ -127,7 +128,6 @@ def main() -> int:
 
     db = RollingDB(rolling_dir)
     new_papers = db.append(all_papers)
-    pruned = db.prune(today=target_date, window_days=ROLLING_WINDOW_DAYS)
 
     # M-1: arXiv has no Sat/Sun submissions; an empty digest on those days is
     # noise rather than signal. Skip writing on weekends if nothing new came in.
@@ -147,7 +147,6 @@ def main() -> int:
         "fetched_per_source": counts,
         "total_fetched": len(all_papers),
         "added_to_db": len(new_papers),
-        "pruned": pruned,
         "total_in_rolling": total_in_db,
         "failures": failures,
     }
@@ -158,8 +157,8 @@ def main() -> int:
     with history_path.open("a", encoding="utf-8") as f:
         f.write(json.dumps(stats, ensure_ascii=False) + "\n")
 
-    logger.info("Daily collect done: fetched=%d, added=%d, pruned=%d, in_db=%d, failures=%d",
-                len(all_papers), len(new_papers), pruned, total_in_db, len(failures))
+    logger.info("Daily collect done: fetched=%d, added=%d, in_db=%d, failures=%d",
+                len(all_papers), len(new_papers), total_in_db, len(failures))
 
     if not args.no_push:
         from .src.git_sync import commit_metadb

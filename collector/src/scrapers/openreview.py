@@ -58,9 +58,11 @@ class OpenReviewScraper:
         out: List[Paper] = []
         # dblp.org/conf/<UPPER>/<year> → use the acronym at parts[2]; otherwise
         # fall back to the existing `<NAME>.cc` heuristic (works for ICLR/NeurIPS).
+        # dblp.org/journals/<lower>/<vol> → uppercase the acronym (e.g. pvldb→PVLDB)
+        # so it matches venue_weight keys.
         parts = venue_id.split("/")
         if parts[0] == "dblp.org" and len(parts) >= 3:
-            venue_short = parts[2]
+            venue_short = parts[2].upper() if parts[1] == "journals" else parts[2]
         else:
             venue_short = parts[0].split(".")[0]
         for n in notes:
