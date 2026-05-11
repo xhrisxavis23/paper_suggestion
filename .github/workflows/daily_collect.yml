@@ -34,7 +34,7 @@ jobs:
           SEMANTIC_SCHOLAR_API_KEY: ${{ secrets.SEMANTIC_SCHOLAR_API_KEY }}
           OPENALEX_MAILTO: ${{ secrets.OPENALEX_MAILTO }}
         run: |
-          python -m collector.main --with-s2 --with-or --with-journal
+          python -m collector.main --with-s2 --with-or --with-journal --no-push
 
       - name: Sweep daily digests older than 60 days
         run: |
