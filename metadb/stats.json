@@ -1,28 +1,29 @@
 {
-  "last_run": "2026-05-22",
-  "ran_at": "2026-05-22T22:18:49.145693+00:00",
+  "last_run": "2026-05-23",
+  "ran_at": "2026-05-23T22:11:07.597192+00:00",
   "fetched_per_source": {
     "arxiv": 641,
-    "hf": 48,
-    "openreview": 64777,
-    "s2": 100,
+    "hf": 49,
+    "openreview": 64771,
+    "s2": 80,
     "journal": 795
   },
-  "total_fetched": 66361,
-  "added_to_db": 470,
-  "total_in_rolling": 232288,
+  "total_fetched": 66336,
+  "added_to_db": 1,
+  "total_in_rolling": 232289,
   "failures": [
+    "openreview:dblp.org/conf/ICAIF/2022:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICAIF%2F2022&limit=1000&offset=0&details=replyCount",
     "openreview:dblp.org/conf/ICAIF/2023:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICAIF%2F2023&limit=1000&offset=0&details=replyCount",
     "openreview:dblp.org/conf/ICAIF/2024:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICAIF%2F2024&limit=1000&offset=0&details=replyCount",
     "openreview:dblp.org/conf/ICAIF/2025:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICAIF%2F2025&limit=1000&offset=0&details=replyCount",
     "openreview:NeurIPS.cc/2025/Workshop/GenAI_in_Finance:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=NeurIPS.cc%2F2025%2FWorkshop%2FGenAI_in_Finance&limit=1000&offset=0&details=replyCount",
     "openreview:NeurIPS.cc/2025/Workshop/MLxOR:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=NeurIPS.cc%2F2025%2FWorkshop%2FMLxOR&limit=1000&offset=0&details=replyCount",
     "openreview:ICML.cc/2024/Workshop/Agentic_Markets:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=ICML.cc%2F2024%2FWorkshop%2FAgentic_Markets&limit=1000&offset=0&details=replyCount",
+    "s2:AAAI:rate-limited (429)",
     "s2:NeurIPS:rate-limited (429)",
     "s2:ICML:rate-limited (429)",
     "s2:ICLR:rate-limited (429)",
     "s2:CVPR:rate-limited (429)",
-    "s2:KDD:rate-limited (429)",
     "s2:SIGMOD:rate-limited (429)",
     "s2:VLDB:rate-limited (429)"
   ]
