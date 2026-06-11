@@ -1,16 +1,16 @@
 {
-  "last_run": "2026-06-10",
-  "ran_at": "2026-06-10T22:58:39.753174+00:00",
+  "last_run": "2026-06-11",
+  "ran_at": "2026-06-11T23:00:32.570163+00:00",
   "fetched_per_source": {
-    "arxiv": 554,
-    "hf": 43,
+    "arxiv": 502,
+    "hf": 39,
     "openreview": 16507,
-    "s2": 0,
+    "s2": 53,
     "journal": 794
   },
-  "total_fetched": 17898,
-  "added_to_db": 404,
-  "total_in_rolling": 237526,
+  "total_fetched": 17895,
+  "added_to_db": 357,
+  "total_in_rolling": 237883,
   "failures": [
     "openreview:ICML.cc/2025/Conference:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=ICML.cc%2F2025%2FConference&limit=1000&offset=1000&details=replyCount",
     "openreview:NeurIPS.cc/2023/Conference:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=NeurIPS.cc%2F2023%2FConference&limit=1000&offset=0&details=replyCount",
@@ -64,10 +64,10 @@
     "openreview:NeurIPS.cc/2025/Workshop/MLxOR:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=NeurIPS.cc%2F2025%2FWorkshop%2FMLxOR&limit=1000&offset=0&details=replyCount",
     "openreview:ICML.cc/2024/Workshop/Agentic_Markets:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=ICML.cc%2F2024%2FWorkshop%2FAgentic_Markets&limit=1000&offset=0&details=replyCount",
     "s2:AAAI:rate-limited (429)",
-    "s2:NeurIPS:rate-limited (429)",
     "s2:ICML:rate-limited (429)",
     "s2:ICLR:rate-limited (429)",
-    "s2:CVPR:rate-limited (429)",
-    "s2:KDD:rate-limited (429)"
+    "s2:KDD:rate-limited (429)",
+    "s2:SIGMOD:rate-limited (429)",
+    "s2:VLDB:rate-limited (429)"
   ]
 }
