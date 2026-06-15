@@ -1,16 +1,16 @@
 {
-  "last_run": "2026-06-14",
-  "ran_at": "2026-06-14T22:36:38.952474+00:00",
+  "last_run": "2026-06-15",
+  "ran_at": "2026-06-15T23:10:49.085615+00:00",
   "fetched_per_source": {
-    "arxiv": 513,
-    "hf": 44,
+    "arxiv": 369,
+    "hf": 46,
     "openreview": 16507,
     "s2": 0,
     "journal": 796
   },
-  "total_fetched": 17860,
-  "added_to_db": 56,
-  "total_in_rolling": 238326,
+  "total_fetched": 17718,
+  "added_to_db": 285,
+  "total_in_rolling": 238611,
   "failures": [
     "openreview:ICML.cc/2025/Conference:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=ICML.cc%2F2025%2FConference&limit=1000&offset=1000&details=replyCount",
     "openreview:NeurIPS.cc/2023/Conference:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=NeurIPS.cc%2F2023%2FConference&limit=1000&offset=0&details=replyCount",
