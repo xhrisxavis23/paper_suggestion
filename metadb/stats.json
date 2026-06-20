@@ -1,6 +1,6 @@
 {
-  "last_run": "2026-06-19",
-  "ran_at": "2026-06-19T22:15:39.753942+00:00",
+  "last_run": "2026-06-20",
+  "ran_at": "2026-06-20T22:36:58.145715+00:00",
   "fetched_per_source": {
     "arxiv": 505,
     "hf": 34,
@@ -9,7 +9,7 @@
     "journal": 803
   },
   "total_fetched": 17849,
-  "added_to_db": 406,
+  "added_to_db": 0,
   "total_in_rolling": 240238,
   "failures": [
     "openreview:ICML.cc/2025/Conference:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=ICML.cc%2F2025%2FConference&limit=1000&offset=1000&details=replyCount",
