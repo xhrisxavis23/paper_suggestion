@@ -1,15 +1,15 @@
 {
-  "last_run": "2026-06-27",
-  "ran_at": "2026-06-27T22:17:22.276821+00:00",
+  "last_run": "2026-06-28",
+  "ran_at": "2026-06-28T22:16:20.309264+00:00",
   "fetched_per_source": {
     "arxiv": 465,
     "hf": 25,
     "openreview": 16507,
-    "s2": 51,
+    "s2": 0,
     "journal": 808
   },
-  "total_fetched": 17856,
-  "added_to_db": 6,
+  "total_fetched": 17805,
+  "added_to_db": 0,
   "total_in_rolling": 241669,
   "failures": [
     "openreview:ICML.cc/2025/Conference:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=ICML.cc%2F2025%2FConference&limit=1000&offset=1000&details=replyCount",
@@ -65,7 +65,11 @@
     "openreview:ICML.cc/2024/Workshop/Agentic_Markets:HTTPError: 429 Client Error: Too Many Requests for url: https://api2.openreview.net/notes?content.venueid=ICML.cc%2F2024%2FWorkshop%2FAgentic_Markets&limit=1000&offset=0&details=replyCount",
     "s2:AAAI:rate-limited (429)",
     "s2:NeurIPS:rate-limited (429)",
+    "s2:ICML:rate-limited (429)",
+    "s2:ICLR:rate-limited (429)",
+    "s2:CVPR:rate-limited (429)",
     "s2:KDD:rate-limited (429)",
-    "s2:SIGMOD:rate-limited (429)"
+    "s2:SIGMOD:rate-limited (429)",
+    "s2:VLDB:rate-limited (429)"
   ]
 }
