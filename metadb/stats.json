@@ -1,16 +1,16 @@
 {
-  "last_run": "2026-07-19",
-  "ran_at": "2026-07-19T22:09:55.714159+00:00",
+  "last_run": "2026-07-20",
+  "ran_at": "2026-07-20T22:14:09.980590+00:00",
   "fetched_per_source": {
-    "arxiv": 395,
-    "hf": 29,
+    "arxiv": 314,
+    "hf": 25,
     "openreview": 0,
     "s2": 0,
-    "journal": 810
+    "journal": 809
   },
-  "total_fetched": 1234,
-  "added_to_db": 0,
-  "total_in_rolling": 246206,
+  "total_fetched": 1148,
+  "added_to_db": 236,
+  "total_in_rolling": 246442,
   "failures": [
     "openreview:dblp.org/conf/ICLR/2023:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICLR%2F2023&limit=1000&offset=0&details=replyCount",
     "openreview:ICLR.cc/2024/Conference:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=ICLR.cc%2F2024%2FConference&limit=1000&offset=0&details=replyCount",
