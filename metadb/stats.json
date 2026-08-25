@@ -1,16 +1,16 @@
 {
-  "last_run": "2026-08-24",
-  "ran_at": "2026-08-24T21:45:34.252821+00:00",
+  "last_run": "2026-08-25",
+  "ran_at": "2026-08-25T21:45:57.128230+00:00",
   "fetched_per_source": {
-    "arxiv": 366,
-    "hf": 21,
+    "arxiv": 464,
+    "hf": 32,
     "openreview": 0,
-    "s2": 65,
+    "s2": 0,
     "journal": 805
   },
-  "total_fetched": 1257,
-  "added_to_db": 274,
-  "total_in_rolling": 254308,
+  "total_fetched": 1301,
+  "added_to_db": 345,
+  "total_in_rolling": 254653,
   "failures": [
     "openreview:dblp.org/conf/ICLR/2023:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICLR%2F2023&limit=1000&offset=0&details=replyCount",
     "openreview:ICLR.cc/2024/Conference:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=ICLR.cc%2F2024%2FConference&limit=1000&offset=0&details=replyCount",
@@ -70,8 +70,10 @@
     "openreview:NeurIPS.cc/2025/Workshop/MLxOR:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=NeurIPS.cc%2F2025%2FWorkshop%2FMLxOR&limit=1000&offset=0&details=replyCount",
     "openreview:ICML.cc/2024/Workshop/Agentic_Markets:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=ICML.cc%2F2024%2FWorkshop%2FAgentic_Markets&limit=1000&offset=0&details=replyCount",
     "s2:AAAI:rate-limited (429)",
+    "s2:NeurIPS:rate-limited (429)",
     "s2:ICML:rate-limited (429)",
     "s2:ICLR:rate-limited (429)",
+    "s2:CVPR:rate-limited (429)",
     "s2:KDD:rate-limited (429)",
     "s2:SIGMOD:rate-limited (429)",
     "s2:VLDB:rate-limited (429)"
