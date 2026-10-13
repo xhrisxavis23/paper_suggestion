@@ -1,18 +1,17 @@
 {
-  "last_run": "2026-10-12",
-  "ran_at": "2026-10-12T00:33:29.591926+00:00",
+  "last_run": "2026-10-13",
+  "ran_at": "2026-10-13T02:35:50.979146+00:00",
   "fetched_per_source": {
     "arxiv": 0,
-    "hf": 50,
+    "hf": 6,
     "openreview": 0,
-    "s2": 66,
+    "s2": 55,
     "journal": 831
   },
-  "total_fetched": 947,
-  "added_to_db": 1,
-  "total_in_rolling": 263443,
+  "total_fetched": 892,
+  "added_to_db": 6,
+  "total_in_rolling": 263449,
   "failures": [
-    "hf:2026-10-12:HTTPError: 400 Client Error: Bad Request for url: https://huggingface.co/api/daily_papers?date=2026-10-12",
     "openreview:dblp.org/conf/ICLR/2023:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICLR%2F2023&limit=1000&offset=0&details=replyCount",
     "openreview:ICLR.cc/2024/Conference:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=ICLR.cc%2F2024%2FConference&limit=1000&offset=0&details=replyCount",
     "openreview:ICLR.cc/2025/Conference:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=ICLR.cc%2F2025%2FConference&limit=1000&offset=0&details=replyCount",
@@ -71,10 +70,10 @@
     "openreview:NeurIPS.cc/2025/Workshop/MLxOR:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=NeurIPS.cc%2F2025%2FWorkshop%2FMLxOR&limit=1000&offset=0&details=replyCount",
     "openreview:ICML.cc/2024/Workshop/Agentic_Markets:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=ICML.cc%2F2024%2FWorkshop%2FAgentic_Markets&limit=1000&offset=0&details=replyCount",
     "s2:AAAI:rate-limited (429)",
-    "s2:NeurIPS:rate-limited (429)",
     "s2:ICML:rate-limited (429)",
     "s2:ICLR:rate-limited (429)",
     "s2:CVPR:rate-limited (429)",
+    "s2:KDD:rate-limited (429)",
     "s2:SIGMOD:rate-limited (429)",
     "s2:VLDB:rate-limited (429)"
   ]
