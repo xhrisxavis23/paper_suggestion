@@ -1,16 +1,16 @@
 {
-  "last_run": "2026-11-26",
-  "ran_at": "2026-11-26T03:34:56.469586+00:00",
+  "last_run": "2026-11-27",
+  "ran_at": "2026-11-27T03:39:44.667887+00:00",
   "fetched_per_source": {
-    "arxiv": 461,
-    "hf": 5,
+    "arxiv": 0,
+    "hf": 8,
     "openreview": 0,
     "s2": 0,
     "journal": 0
   },
-  "total_fetched": 466,
-  "added_to_db": 341,
-  "total_in_rolling": 270101,
+  "total_fetched": 8,
+  "added_to_db": 5,
+  "total_in_rolling": 270106,
   "failures": [
     "openreview:dblp.org/conf/ICLR/2023:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=dblp.org%2Fconf%2FICLR%2F2023&limit=1000&offset=0&details=replyCount",
     "openreview:ICLR.cc/2024/Conference:HTTPError: 403 Client Error: Forbidden for url: https://api2.openreview.net/notes?content.venueid=ICLR.cc%2F2024%2FConference&limit=1000&offset=0&details=replyCount",
@@ -77,10 +77,10 @@
     "s2:KDD:rate-limited (429)",
     "s2:SIGMOD:rate-limited (429)",
     "s2:VLDB:rate-limited (429)",
-    "openalex:IEEE Trans. Industrial Informatics:HTTPError: 401 Client Error: Unauthorized for url: https://api.openalex.org/works?filter=primary_location.source.issn%3A1551-3203%2Cfrom_publication_date%3A2022-10-18%2Cto_publication_date%3A2026-11-26%2Ctype%3Aarticle%7Creview%2Cis_paratext%3Afalse&select=id%2Cdoi%2Ctitle%2Cpublication_date%2Cauthorships%2Cabstract_inverted_index%2Cprimary_location%2Copen_access&per-page=50&cursor=IlsxNzgzNjQxNjAwMDAwLCAnLUluZmluaXR5JywgMCwgJ2h0dHBzOi8vb3BlbmFsZXgub3JnL1c3MTY3ODk0MDIzJ10i&sort=publication_date%3Adesc",
-    "openalex:Expert Systems with Applications:HTTPError: 401 Client Error: Unauthorized for url: https://api.openalex.org/works?filter=primary_location.source.issn%3A0957-4174%2Cfrom_publication_date%3A2022-10-18%2Cto_publication_date%3A2026-11-26%2Ctype%3Aarticle%7Creview%2Cis_paratext%3Afalse&select=id%2Cdoi%2Ctitle%2Cpublication_date%2Cauthorships%2Cabstract_inverted_index%2Cprimary_location%2Copen_access&per-page=50&cursor=IlsxNzk0NjE0NDAwMDAwLCAnLUluZmluaXR5JywgMCwgJ2h0dHBzOi8vb3BlbmFsZXgub3JnL1c3MjI2MDQwMDE1J10i&sort=publication_date%3Adesc",
-    "openalex:Journal of Financial Data Science:HTTPError: 401 Client Error: Unauthorized for url: https://api.openalex.org/works?filter=primary_location.source.issn%3A2640-3943%2Cfrom_publication_date%3A2022-10-18%2Cto_publication_date%3A2026-11-26%2Ctype%3Aarticle%7Creview%2Cis_paratext%3Afalse&select=id%2Cdoi%2Ctitle%2Cpublication_date%2Cauthorships%2Cabstract_inverted_index%2Cprimary_location%2Copen_access&per-page=50&cursor=IlsxNzQ5NDI3MjAwMDAwLCA5Ny4wLCAzLCAnaHR0cHM6Ly9vcGVuYWxleC5vcmcvVzQ0MTExNTY3MTUnXSI%3D&sort=publication_date%3Adesc",
-    "openalex:Quantitative Finance:HTTPError: 401 Client Error: Unauthorized for url: https://api.openalex.org/works?filter=primary_location.source.issn%3A1469-7688%2Cfrom_publication_date%3A2022-10-18%2Cto_publication_date%3A2026-11-26%2Ctype%3Aarticle%7Creview%2Cis_paratext%3Afalse&select=id%2Cdoi%2Ctitle%2Cpublication_date%2Cauthorships%2Cabstract_inverted_index%2Cprimary_location%2Copen_access&per-page=50&cursor=IlsxNzgyMTcyODAwMDAwLCA5NC4wLCAxLCAnaHR0cHM6Ly9vcGVuYWxleC5vcmcvVzcxNjIxNDE5NzUnXSI%3D&sort=publication_date%3Adesc",
-    "openalex:Decision Support Systems:HTTPError: 401 Client Error: Unauthorized for url: https://api.openalex.org/works?filter=primary_location.source.issn%3A0167-9236%2Cfrom_publication_date%3A2022-10-18%2Cto_publication_date%3A2026-11-26%2Ctype%3Aarticle%7Creview%2Cis_paratext%3Afalse&select=id%2Cdoi%2Ctitle%2Cpublication_date%2Cauthorships%2Cabstract_inverted_index%2Cprimary_location%2Copen_access&per-page=50&cursor=IlsxNzgzMjk2MDAwMDAwLCA5NC4wLCAxLCAnaHR0cHM6Ly9vcGVuYWxleC5vcmcvVzcxNjc0ODEyOTEnXSI%3D&sort=publication_date%3Adesc"
+    "openalex:IEEE Trans. Industrial Informatics:HTTPError: 401 Client Error: Unauthorized for url: https://api.openalex.org/works?filter=primary_location.source.issn%3A1551-3203%2Cfrom_publication_date%3A2022-10-19%2Cto_publication_date%3A2026-11-27%2Ctype%3Aarticle%7Creview%2Cis_paratext%3Afalse&select=id%2Cdoi%2Ctitle%2Cpublication_date%2Cauthorships%2Cabstract_inverted_index%2Cprimary_location%2Copen_access&per-page=50&cursor=IlsxNzgzNjQxNjAwMDAwLCAnLUluZmluaXR5JywgMCwgJ2h0dHBzOi8vb3BlbmFsZXgub3JnL1c3MTY3ODk0MDIzJ10i&sort=publication_date%3Adesc",
+    "openalex:Expert Systems with Applications:HTTPError: 401 Client Error: Unauthorized for url: https://api.openalex.org/works?filter=primary_location.source.issn%3A0957-4174%2Cfrom_publication_date%3A2022-10-19%2Cto_publication_date%3A2026-11-27%2Ctype%3Aarticle%7Creview%2Cis_paratext%3Afalse&select=id%2Cdoi%2Ctitle%2Cpublication_date%2Cauthorships%2Cabstract_inverted_index%2Cprimary_location%2Copen_access&per-page=50&cursor=IlsxNzk0ODczNjAwMDAwLCAnLUluZmluaXR5JywgMCwgJ2h0dHBzOi8vb3BlbmFsZXgub3JnL1c3MjMzOTI4ODE2J10i&sort=publication_date%3Adesc",
+    "openalex:Journal of Financial Data Science:HTTPError: 401 Client Error: Unauthorized for url: https://api.openalex.org/works?filter=primary_location.source.issn%3A2640-3943%2Cfrom_publication_date%3A2022-10-19%2Cto_publication_date%3A2026-11-27%2Ctype%3Aarticle%7Creview%2Cis_paratext%3Afalse&select=id%2Cdoi%2Ctitle%2Cpublication_date%2Cauthorships%2Cabstract_inverted_index%2Cprimary_location%2Copen_access&per-page=50&cursor=IlsxNzQ5NDI3MjAwMDAwLCA5Ny4wLCAzLCAnaHR0cHM6Ly9vcGVuYWxleC5vcmcvVzQ0MTExNTY3MTUnXSI%3D&sort=publication_date%3Adesc",
+    "openalex:Quantitative Finance:HTTPError: 401 Client Error: Unauthorized for url: https://api.openalex.org/works?filter=primary_location.source.issn%3A1469-7688%2Cfrom_publication_date%3A2022-10-19%2Cto_publication_date%3A2026-11-27%2Ctype%3Aarticle%7Creview%2Cis_paratext%3Afalse&select=id%2Cdoi%2Ctitle%2Cpublication_date%2Cauthorships%2Cabstract_inverted_index%2Cprimary_location%2Copen_access&per-page=50&cursor=IlsxNzgyMTcyODAwMDAwLCA5My4wLCAxLCAnaHR0cHM6Ly9vcGVuYWxleC5vcmcvVzcxNjIxNDE5NzUnXSI%3D&sort=publication_date%3Adesc",
+    "openalex:Decision Support Systems:HTTPError: 401 Client Error: Unauthorized for url: https://api.openalex.org/works?filter=primary_location.source.issn%3A0167-9236%2Cfrom_publication_date%3A2022-10-19%2Cto_publication_date%3A2026-11-27%2Ctype%3Aarticle%7Creview%2Cis_paratext%3Afalse&select=id%2Cdoi%2Ctitle%2Cpublication_date%2Cauthorships%2Cabstract_inverted_index%2Cprimary_location%2Copen_access&per-page=50&cursor=IlsxNzgzMzgyNDAwMDAwLCA5My4wLCAxLCAnaHR0cHM6Ly9vcGVuYWxleC5vcmcvVzcxNjc2MzUwODMnXSI%3D&sort=publication_date%3Adesc"
   ]
 }
